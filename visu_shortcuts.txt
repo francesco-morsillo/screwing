@@ -1,0 +1,17 @@
+robotviewer.displayserver:INFO:Keyboard shortcuts:
+q: Quit the program
+m: Turn meshes on/off
+s: Turn skeletons on/off
+w: Turn wireframe on/off
++: Skeleton size up
+-: Skeleton size down
+l: lighter scene
+d: dimmer scene
+o: light ATTENUATION down
+e: light ATTENUATION up
+t: transparency up
+r: transparency down
+c: screen capture
+v: start/stop video recording
+x: change camera
+

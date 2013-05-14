@@ -1,0 +1,7 @@
+ent.help()
+ent.sigs
+ent.displaySignals()
+
+ent.signalName.value
+ent.signalName.recompute(time)
+	
