@@ -65,13 +65,14 @@ def calcRotFromAA(rx,ry,rz,theta):
 
 ### Two-hands Screw-driver Homogeneous Transformation Matrixes ------------------------
 
-# sToll = reference of the screw driver
+# TwoHandToll = reference of the screw driver
 # trigger = 6position where the left hand is supposed to be positioned
 # support = 6position where the right hand is supposed to be positioned
 # screw = 6position of the head of the screwing part
 
 # From the reference to the handles.
-TwoHandToolToTriggerMatrix=eye(4); TwoHandToolToTriggerMatrix[0:3,3] = (0.25,0.,0.)
+TwoHandToolToTriggerMatrix=eye(4); TwoHandToolToTriggerMatrix[0:3,0:3]=array([[-1.,0.,0.],[0.,-1.,0.],[0.,0.,1.]])
+TwoHandToolToTriggerMatrix[0:3,3] = (0.25,0.,0.)
 TwoHandToolToSupportMatrix=eye(4); TwoHandToolToSupportMatrix[0:3,3] = (-0.03,0.,0.)
 
 # From the reference to the screwing part (rotation on z)

@@ -29,7 +29,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,rob
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
 
-robotName = 'hrp10small'
+robotName = 'hrp14small'
 robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)

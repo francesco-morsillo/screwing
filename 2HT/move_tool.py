@@ -102,15 +102,15 @@ plug(sot.control,robot.control)
 
 # TwoHandTool
 xd = 0.4
-yd = 0.
+yd = -0.2
 zd = 1.1
 roll = 0.
 pitch = pi/5
 yaw = pi/2
 
-TwoHandTool0 = (xd,yd,zd)
+TwoHandTool_pos = (xd,yd,zd)
 TwoHandTool_or = (roll,pitch,yaw)
-TwoHandTool = TwoHandTool0 + TwoHandTool_or
+TwoHandTool = TwoHandTool_pos + TwoHandTool_or
 robot.viewer.updateElementConfig('TwoHandTool',TwoHandTool)
 
 # Homogeneous Matrix of the TwoHandTool. Normally given from the camera
@@ -190,19 +190,9 @@ gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function ro
 
 
 # TwoHandTool Moving
-
-class TwoHandToolPosition:
-    def __init__(self,xyzRPY):
-        self.TwoHandTool = xyzRPY
-
-    def follow(self,task):
-        pippo = array(task.feature.position.value)
-	self.TwoHandTool = vectorToTuple(pippo[0:3,3])
-	# extract the values RPY from matrix -------------------------------------------------------------------------------------
-	robot.viewer.updateElementConfig('TwoHandTool',self.TwoHandTool+(roll,pitch,yaw))
-	
-tool = TwoHandToolPosition(TwoHandTool)
-
+def tool_follow(task):
+	tool = dot( array(task.feature.position.value) , linalg.inv(TwoHandToolToSupportMatrix) )
+	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+(roll,pitch,yaw))
 
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
@@ -219,7 +209,7 @@ def inc():
     attime.run(robot.control.time)
     updateComDisplay(robot,dyn.com)
     # Move the TwoHandTool
-    tool.follow(taskRH)
+    tool_follow(taskRH)
 
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
@@ -274,14 +264,17 @@ SolverKine.toList = toList
 # the XYZ translation), and last arg is the adaptive gain (5 at the target, 1
 # far from it, with slope st. at 0.01m from the target, 90% of the max gain
 # value is reached)
-M=eye(4); M[0:3,3] = array([0.,-0.2,0.])
-taskRH.ref = matrixToTuple(dot(array(refToSupportMatrix),M))
+displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.2,0.,0.])
+
+taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
 taskRH.feature.selec.value = '110111'	# RX free
 taskRH.gain = (10,1,0.01,0.9)
-taskLH.ref = matrixToTuple(dot(array(refToTriggerMatrix),M))
+taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
 taskLH.feature.selec.value = '110111'	# RX free
 taskLH.gain = (10,1,0.01,0.9)
 
+ScrewGolMatrix = dot(displacementMatrix,refToScrewMatrix)
+robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0,0))
 
 # Set up the stack solver.
 sot.addContact(contactLF)

@@ -27,32 +27,21 @@ from dynamic_graph.sot.core.utils.history import History
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 
+
+from dynamic_graph.sot.fmorsill.utility import *
+
 # --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
 # --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
 # --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
 
-def extractRPYFromRot(Rot):
-	YAW=math.atan2(Rot[1][0],Rot[0][0])
-	PITCH=math.atan2(-Rot[2][0],sqrt(Rot[2][1]**2+Rot[2][2]**2))
-	ROLL=math.atan2(Rot[2][1],Rot[2][2])
-	return array([ROLL,PITCH,YAW])
-
-def calcRotFromRPY(roll,pitch,yaw):
-	yawRot=array([[cos(yaw),-sin(yaw),0.],[sin(yaw),cos(yaw),0.],[0.,0.,1.]])
-	pitchRot=array([[cos(pitch),0.,sin(pitch)],[0.,1.,0.],[-sin(pitch),0.,cos(pitch)]])
-	rollRot=array([[1.,0.,0.],[0.,cos(roll),-sin(roll)],[0.,sin(roll),cos(roll)]])
-	Rot=dot(dot(yawRot,pitchRot),rollRot)
-	return Rot
-
-
-robotName = 'hrp10small'
+robotName = 'hrp14small'
 robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)
 dt=5e-3
 
 
-# Robot and sTool in the origin
+# Robot and TwoHandTool in the origin
 xr=0.
 yr=0.
 zr=0.64870185118253043
@@ -60,16 +49,16 @@ rollr=0.
 pitchr=0.
 yawr=0.
 
-xd = 0.4
-yd = -0.1
-zd = 1.1
-rolld = 0.
-pitchd = pi/5
-yawd = pi/2
+xTool = 0.4
+yTool = -0.2
+zTool = 1.1
+rollTool = 0.
+pitchTool = pi/5
+yawTool = pi/2
 
 
 # Initial configuration
-# We give the absolute position of the robot and then extract the relative rototranslation to impose to the sTool
+# We give the absolute position of the robot and then extract the relative rototranslation to impose to the tool
 from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
 x0=0#-1.6
 y0=0.#1.8
@@ -86,40 +75,21 @@ robot.set( initialConfig[robotName] )
 
 """
 # Wall initial configuration
-robot.set((-1.57623,1.76296,0.697904,-2.09979e-23,2.28944e-23,1.53291,0.0378841,0.0400381,-0.22156,0.278669,-0.0571098,-0.0400381,0.0378841,0.0401019,-0.186463,0.224335,-0.0378714,-0.0401019,-0.0573337,-0.0797234,6.23359e-05,0.000590181,-0.446046,-0.184923,0.882121,-1.6442,1.74405,0.433484,0.486526,0.174533,-0.64642,-0.169962,0.353173,-1.10853,1.84994,1.83295,-0.000619176,0.174533))
-"""
+robot.set()"""
 
 # Center initial configuration
-robot.set((-0.021742,-0.0248409,0.699608,-4.57548e-24,-1.39539e-24,-0.0396372,0.0396372,0.0417173,-0.187983,0.262897,-0.074914,-0.0417173,0.0396372,0.0417877,-0.147051,0.197411,-0.0503601,-0.0417877,-0.0791486,-0.0797719,-5.21839e-05,0.00148229,-0.417676,-0.176956,0.902757,-1.68616,1.7606,0.463635,0.488594,0.174533,-0.600312,-0.169887,0.369851,-1.18484,1.84986,1.91579,-0.000575116,0.174533))
+#for hrp14
+robot.set((-0.0351735,0.0170394,0.689482,6.95913e-24,6.62503e-23,0.0107048,-0.0107048,-0.0291253,-0.280304,0.410581,-0.130277,0.0291253,-0.0107048,-0.0291644,-0.298025,0.441124,-0.1431,0.0291644,0.0119509,-0.08704,-8.89686e-19,-4.55781e-20,-0.122966,-0.75002,0.497028,-1.85734,1.55327,0.410855,0.174533,-0.289009,-0.174232,-0.806603,-1.27773,-0.657843,0.683645,0.174533))
 
 
 # Screw Lenght
 screw_len = 0.
 
-# STool RotoTranslation / Homogeneous Matrix of the STool. Normally given from the camera
+# TwoHandTool RotoTranslation / Homogeneous Matrix of the TwoHandTool. Normally given from the camera
 RTMatrix = eye(4); RTMatrix[0:3,0:3] = calcRotFromRPY(roll0-rollr,pitch0-pitchr,yaw0-yawr)
 RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
-newSTool = dot(RTMatrix,array([xd,yd,zd,1]))
-sToolPos = vectorToTuple( newSTool[0:3] )
-SToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rolld,pitchd,yawd))
-sToolOr = vectorToTuple(extractRPYFromRot(SToolRot))
-sTool = sToolPos + sToolOr
-
-# Homogeneous Matrixes of the handles. Known from the tool model
-sToolToTriggerMatrix=eye(4); sToolToTriggerMatrix[0:3,3] = (0.25,0.,0.)
-sToolToSupportMatrix=eye(4); sToolToSupportMatrix[0:3,3] = (-0.03,0.,0.)
-
-# Homogeneous Matrix of the screwing part (rotation on z). Known from the tool model
-#sToolToScrewMatrix=array([[1.,0.,0.,-0.11],[0.,0.,-1.,-0.03],[0.,1.,0.,0.],[0.,0.,0.,1.]])
-sToolToScrewMatrix=array([[1.,0.,0.,-0.11],[0.,1.,0.,-0.03],[0.,0.,1.,0.],[0.,0.,0.,1.]])
-
-
-# Homogeneous Matrix screw to support
-screwToSupportMatrix=dot(linalg.inv(sToolToScrewMatrix),sToolToSupportMatrix)
-
-# Homogeneous Matrix support to trigger
-supportToTriggerMatrix=dot(linalg.inv(sToolToSupportMatrix),sToolToTriggerMatrix)
-
+TwoHandToolPos = dot(RTMatrix,array([xTool,yTool,zTool,1]))	# HOMOGENEOUS POSITION!! CUT OFF THE 1 TO USE IT :-)
+TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool))
 
 
 # goals
@@ -134,7 +104,7 @@ goal4 = (-1.5,2.4,1.1,-1.57,0.,0.)
 # visualization
 addRobotViewer(robot,small=True,verbose=True)
 robot.viewer.updateElementConfig('fov',[0,0,-10,3.14,0,0])
-robot.viewer.updateElementConfig('sTool',sTool)
+robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(TwoHandToolPos[0:3])+vectorToTuple(extractRPYFromRot(TwoHandToolRot)))
 robot.viewer.updateElementConfig('goal1',goal1)
 robot.viewer.updateElementConfig('goal2',goal2)
 robot.viewer.updateElementConfig('goal3',goal3)
@@ -242,17 +212,10 @@ taskWaist=MetaTask6d('waist',dyn,'waist','waist')
 gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function rot=0 --> we set a random position not to control it
 
 
-# STool Moving
-
-class SToolPosition:
-    def __init__(self,xyzRPY=(0.,0.,0.,0.,0.,0.)):
-        self.sTool = xyzRPY
-
-    def follow(self,toto):
-	self.sTool = vectorToTuple(toto[0:3,3]) + vectorToTuple(extractRPYFromRot(toto[0:3,0:3]))
-	robot.viewer.updateElementConfig('sTool',self.sTool)
-	
-dTool = SToolPosition(sTool)
+# TwoHandTool Moving
+def toolFollow(task):
+	tool = dot( array(task.feature.position.value) , RHToTwoHandToolMatrix )
+	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3]) + vectorToTuple(extractRPYFromRot(tool[0:3,0:3])) )
 
 
 # --- OTHER CONFIGS ----------------------------------------------------------
@@ -322,8 +285,8 @@ center = array([(LFx+RFx)/2,(LFy+RFy)/2,0.])	# z not important
 # Set the aims
 contactLF.ref = matrixToTuple(LFMatH)
 contactRF.ref = matrixToTuple(RFMatH)
-taskSupportSmall.referenceInf.value = (center[0]-0.02,center[1]-0.05,0)    # Xmin, Ymin
-taskSupportSmall.referenceSup.value = (center[0]+0.05,center[1]+0.07,0)    # Xmax, Ymax
+taskSupportSmall.referenceInf.value = (center[0]-0.05,center[1]-0.13,0)    # Xmin, Ymin
+taskSupportSmall.referenceSup.value = (center[0]+0.10,center[1]+0.13,0)    # Xmax, Ymax
 
 # Set up the stack solver.
 sot.addContact(contactLF)
@@ -337,18 +300,18 @@ push(taskSupportSmall)
 
 # Static task options
 taskRH.feature.selec.value = '111111'	# RX no more free with the tool
-taskRH.gain = (1000000,1,0.01,0.9)
+taskRH.gain = (1000,100,0.01,0.9)
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain = (1000000,1,0.01,0.9)
+taskLH.gain = (1000,100,0.01,0.9)
 
 
-#RH-STool Homogeneous Transformation Matrix (fixed in time)
-refToSToolMatrix = eye(4); refToSToolMatrix[0:3,0:3] = SToolRot; refToSToolMatrix[0:3,3] = newSTool[0:3]
+#RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
 taskRH.feature.position.recompute(0)
-RHToSToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToSToolMatrix)
+refToTwoHandToolMatrix = eye(4); refToTwoHandToolMatrix[0:3,0:3] = TwoHandToolRot; refToTwoHandToolMatrix[0:3,3] = TwoHandToolPos[0:3]
+RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 #!!!!!! RH and Support are different references, because the X rotation is not controlled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # The hands have to cover the same displacement, but in a different reference
-RHToScrewMatrix = dot(RHToSToolMatrix,sToolToScrewMatrix)
+RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
 ep = 1 # random
 change_goal = True
@@ -356,9 +319,8 @@ state = 0
 goalGlobal = None
 
 def posErrCalc(goal,RHToScrewMatrix):
-	taskRH.feature.position.recompute
 	screwMatrix = dot(array(taskRH.feature.position.value),RHToScrewMatrix)
-	global ep
+	#global ep
 	ep = linalg.norm(goal - screwMatrix[0:3,3])
 	return ep
 
@@ -366,12 +328,12 @@ def posErrCalc(goal,RHToScrewMatrix):
 def new_goal(goal):
 
 	taskRH.feature.position.recompute
-	refToSToolMatrix = dot(array(taskRH.feature.position.value),RHToSToolMatrix)
+	refToTwoHandToolMatrix = dot(array(taskRH.feature.position.value),RHToTwoHandToolMatrix)
 
 	# Homogeneous Matrixe from the reference to the screw
-	refToScrewMatrix=dot(refToSToolMatrix,sToolToScrewMatrix)
+	refToScrewMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
-	# from Screw to a mat oriented as RH, but centered in RH
+	# from RH to a mat oriented as Screw, but centered in RH
 	RH2ToScrewMatrix = eye(4); RH2ToScrewMatrix[0:3,0:3] = RHToScrewMatrix[0:3,0:3]; RH2ToScrewMatrix[0:3,3] = array([0.,0.,0.]) 
 
 	if state==0: # Reach the position
@@ -393,7 +355,7 @@ def new_goal(goal):
 	# To block the orientation on the screw-driver axis we have to use the actual position of the hands
 	AimRHMatrix = eye(4); AimRHMatrix[0:4,3] = RHDisplacement
 	taskRH.ref = matrixToTuple(dot(array(taskRH.feature.position.value),AimRHMatrix))
-	taskLH.ref = matrixToTuple(dot(array(taskRH.ref),supportToTriggerMatrix))	
+	taskLH.ref = matrixToTuple(dot(array(taskRH.ref),TwoHandSupportToTriggerMatrix))	
 
 
 
@@ -403,7 +365,7 @@ def new_goal(goal):
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 @loopInThread
 def inc():
-	global change_goal,state,RHToSToolMatrix,RHToScrewMatrix
+	global change_goal,state,RHToTwoHandToolMatrix,RHToScrewMatrix
 	if change_goal:
 		global new_goal,goalGlobal
 		goalGlobal = array(goal1)
@@ -412,11 +374,11 @@ def inc():
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
-	# Move the sTool
-	dTool.follow(dot(array(taskRH.feature.position.value),RHToSToolMatrix))
+	# Move the TwoHandTool
+	toolFollow(taskRH)
 
 	# Position error calculation and change of state
-	if posErrCalc(goalGlobal[0:3],RHToScrewMatrix)<0.01 :
+	if posErrCalc(goalGlobal[0:3],RHToScrewMatrix)<0.001 :
 		global state, change_goal
 		state = 1 - state
 		change_goal = True
