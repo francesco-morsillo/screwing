@@ -180,8 +180,8 @@ plug(dyn.Jcom,featureSupportSmall.jacobianIN)
 taskSupportSmall=TaskInequality('taskSupportSmall')
 taskSupportSmall.add(featureSupportSmall.name)
 taskSupportSmall.selec.value = '011'
-taskSupportSmall.referenceInf.value = (-0.02,-0.05,0)    # Xmin, Ymin
-taskSupportSmall.referenceSup.value = (0.05,0.07,0)  # Xmax, Ymax
+taskSupportSmall.referenceInf.value = (-0.05,-0.13,0)    # Xmin, Ymin
+taskSupportSmall.referenceSup.value = (0.10,0.13,0)  # Xmax, Ymax
 taskSupportSmall.dt.value=dt
 
 # ---- WAIST TASK ---
@@ -197,6 +197,35 @@ def tool_follow(task):
 	tool = dot( array(task.feature.position.value) , linalg.inv(TwoHandToolToSupportMatrix) )
 	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+(roll,pitch,yaw))
 
+
+# Motion recording
+zmp_out = open("/tmp/data.zmp","w")
+hip_out = open("/tmp/data.hip","w")
+pos_out = open("/tmp/data.pos","w")
+
+def record_zmp():
+	zmp_out.write(str(robot.control.time*dt)+"\t")
+	#comToZmpMatrix = eye(4);
+	ZMP = array(dyn.com.value)
+	ZMP[2] = -0.645
+	for i in range(3):
+		zmp_out.write(str(ZMP[i])+"\t")
+	zmp_out.write("\n")
+
+def record_hip():
+	hip_out.write(str(robot.control.time*dt)+"\t")
+	HIP = dyn.position.value[3:6]
+	for i in range(3):
+		hip_out.write(str(HIP[i])+"\t")
+	hip_out.write("\n")
+
+def record_pos():
+	pos_out.write(str(robot.control.time*dt)+"\t")
+	POS = [0]*40
+	POS[0:30] = dyn.position.value[6:36]
+	for i in range(40):
+		pos_out.write(str(POS[i])+"\t")
+	pos_out.write("\n")
 
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
@@ -214,10 +243,14 @@ def inc():
     updateComDisplay(robot,dyn.com)
     # Move the TwoHandTool
     tool_follow(taskRH)
+    record_zmp()
+    record_pos()
+    record_hip()
 
     if linalg.norm(array(taskRH.feature.position.value)[0:3,3] - array(taskRH.ref)[0:3,3])<0.001:
-	taskRH.ref = refToSupportMatrix
-	taskLH.ref = refToTriggerMatrix
+	displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([-0.2,0.,0.])
+	taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
+	taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
 
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
@@ -266,18 +299,6 @@ SolverKine.toList = toList
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 
-"""
-#RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
-taskRH.feature.position.recompute(0)
-refToTwoHandToolMatrix = eye(4); refToTwoHandToolMatrix[0:3,0:3] = calcRotFromRPY(roll,pitch,yaw)
-refToTwoHandToolMatrix[0:3,3] = array(TwoHandTool_pos)
-RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
-#!!!!!! RH and Support are different references, because the X rotation is not controlled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# The hands have to cover the same displacement, but in a different reference
-RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
-"""
-
-
 # Set the target for RH and LH task. Third arg is an activation flag (say control only
 # the XYZ translation), and last arg is the adaptive gain (5 at the target, 1
 # far from it, with slope st. at 0.01m from the target, 90% of the max gain
@@ -286,10 +307,10 @@ displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.2,0.,0.])
 
 taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain = (10,1,0.01,0.9)
+taskRH.gain = (1000,100,0.01,0.9)
 taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain = (10,1,0.01,0.9)
+taskLH.gain = (1000,100,0.01,0.9)
 
 ScrewGolMatrix = dot(displacementMatrix,refToScrewMatrix)
 robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0,0))
