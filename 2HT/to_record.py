@@ -180,15 +180,16 @@ plug(dyn.Jcom,featureSupportSmall.jacobianIN)
 taskSupportSmall=TaskInequality('taskSupportSmall')
 taskSupportSmall.add(featureSupportSmall.name)
 taskSupportSmall.selec.value = '011'
-taskSupportSmall.referenceInf.value = (-0.02,-0.05,0)    # Xmin, Ymin
-taskSupportSmall.referenceSup.value = (0.05,0.05,0)  # Xmax, Ymax
+taskSupportSmall.referenceInf.value = (-0.02,-0.03,0)    # Xmin, Ymin
+taskSupportSmall.referenceSup.value = (0.05,0.06,0)  # Xmax, Ymax
 taskSupportSmall.dt.value=dt
 
 # ---- WAIST TASK ---
 taskWaist=MetaTask6d('waist',dyn,'waist','waist')
 gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function rot=0 --> we set a random position not to control it
 
-
+# --- TASK COM (if not walking)
+taskCom = MetaTaskKineCom(dyn)
 
 
 
@@ -205,9 +206,12 @@ pos_out = open("/tmp/data.pos","w")
 
 def record_zmp():
 	zmp_out.write(str(robot.control.time*dt)+"\t")
-	#comToZmpMatrix = eye(4);
 	ZMP = array(dyn.com.value)
-	ZMP[2] = -0.645
+	ZMP[2] = 0. #-0.645
+
+	# extract waist position
+	ZMP = dot( linalg.inv(array(dyn.waist.value)) , hstack([ZMP,1]))	
+
 	for i in range(3):
 		zmp_out.write(str(ZMP[i])+"\t")
 	zmp_out.write("\n")
@@ -248,8 +252,9 @@ def inc():
     record_hip()
 
     if linalg.norm(array(taskRH.feature.position.value)[0:3,3] - array(taskRH.ref)[0:3,3])<0.001:
-	taskRH.ref = refToSupportMatrix
-	taskLH.ref = refToTriggerMatrix
+	displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.03,0.,0.])
+	taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
+	taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
 
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
@@ -298,30 +303,36 @@ SolverKine.toList = toList
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 
+# COM task configuration: the reference is the initial COM value, with a high
+# gain (10).
+dyn.com.recompute(0)
+taskCom.featureDes.errorIN.value = dyn.com.value
+taskCom.task.controlGain.value = 10
+
 # Set the target for RH and LH task. Selec is the activation flag (say control only
 # the XYZ translation), and gain is the adaptive gain (10 at the target, 0.1
 # far from it, with slope st. at 0.01m from the target, 90% of the max gain
 # value is reached
-displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.2,0.,0.])
+displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.15,0.,0.])
 
 taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain.setByPoint(10,0.1,0.01,0.9)
+taskRH.gain.setByPoint(6,0.1,0.01,0.9)
 taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain.setByPoint(10,0.1,0.01,0.9)
+taskLH.gain.setByPoint(6,0.1,0.01,0.9)
 
 ScrewGolMatrix = dot(displacementMatrix,refToScrewMatrix)
 robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0,0))
 
 # Set up the stack solver.
+push(taskJL)
 sot.addContact(contactLF)
 sot.addContact(contactRF)
-push(taskJL)
+push(taskCom)
 push(taskRH)
 push(taskLH)
 push(taskWaist)
-push(taskSupportSmall)
 
 # And run.
 go()
