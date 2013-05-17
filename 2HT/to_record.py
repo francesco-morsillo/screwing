@@ -1,7 +1,7 @@
 # ______________________________________________________________________________
 # ******************************************************************************
-# SIMPLEST EXAMPLE OF INVERSE KINEMATICS.
-# The robot moves the hand to a given position.
+# HORIZONTAL ROBOT MOVING AND RETURN.
+# The robot moves the screw-driver horizontally and then comes back to the initial position.
 # ______________________________________________________________________________
 # ******************************************************************************
 
@@ -180,8 +180,8 @@ plug(dyn.Jcom,featureSupportSmall.jacobianIN)
 taskSupportSmall=TaskInequality('taskSupportSmall')
 taskSupportSmall.add(featureSupportSmall.name)
 taskSupportSmall.selec.value = '011'
-taskSupportSmall.referenceInf.value = (-0.05,-0.13,0)    # Xmin, Ymin
-taskSupportSmall.referenceSup.value = (0.10,0.13,0)  # Xmax, Ymax
+taskSupportSmall.referenceInf.value = (-0.02,-0.05,0)    # Xmin, Ymin
+taskSupportSmall.referenceSup.value = (0.05,0.05,0)  # Xmax, Ymax
 taskSupportSmall.dt.value=dt
 
 # ---- WAIST TASK ---
@@ -248,9 +248,8 @@ def inc():
     record_hip()
 
     if linalg.norm(array(taskRH.feature.position.value)[0:3,3] - array(taskRH.ref)[0:3,3])<0.001:
-	displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([-0.2,0.,0.])
-	taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
-	taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
+	taskRH.ref = refToSupportMatrix
+	taskLH.ref = refToTriggerMatrix
 
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
@@ -299,18 +298,18 @@ SolverKine.toList = toList
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 
-# Set the target for RH and LH task. Third arg is an activation flag (say control only
-# the XYZ translation), and last arg is the adaptive gain (5 at the target, 1
+# Set the target for RH and LH task. Selec is the activation flag (say control only
+# the XYZ translation), and gain is the adaptive gain (10 at the target, 0.1
 # far from it, with slope st. at 0.01m from the target, 90% of the max gain
-# value is reached)
+# value is reached
 displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.2,0.,0.])
 
 taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain = (1000,100,0.01,0.9)
+taskRH.gain.setByPoint(10,0.1,0.01,0.9)
 taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain = (1000,100,0.01,0.9)
+taskLH.gain.setByPoint(10,0.1,0.01,0.9)
 
 ScrewGolMatrix = dot(displacementMatrix,refToScrewMatrix)
 robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0,0))

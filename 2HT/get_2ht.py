@@ -1,7 +1,8 @@
 # ______________________________________________________________________________
 # ******************************************************************************
-# SIMPLEST EXAMPLE OF INVERSE KINEMATICS.
-# The robot moves the hand to a given position.
+# REACHIN A GIVEN POSITION.
+# The robot (fixed in the origin) moves the hands to given positions that 
+# represent the grasp points of the tool.
 # ______________________________________________________________________________
 # ******************************************************************************
 
@@ -27,84 +28,60 @@ from dynamic_graph.sot.core.utils.history import History
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 
-# --- ROBOT AND DRILL SIMU ---------------------------------------------------------------
-# --- ROBOT AND DRILL SIMU ---------------------------------------------------------------
-# --- ROBOT AND DRILL SIMU ---------------------------------------------------------------
-
-def extractRPYFromRot(Rot):
-	YAW=math.atan2(Rot[1][0],Rot[0][0])
-	PITCH=math.atan2(-Rot[2][0],sqrt(Rot[2][1]**2+Rot[2][2]**2))
-	ROLL=math.atan2(Rot[2][1],Rot[2][2])
-	return array([ROLL,PITCH,YAW])
-
-def calcRotFromRPY(roll,pitch,yaw):
-	yawRot=array([[cos(yaw),-sin(yaw),0.],[sin(yaw),cos(yaw),0.],[0.,0.,1.]])
-	pitchRot=array([[cos(pitch),0.,sin(pitch)],[0.,1.,0.],[-sin(pitch),0.,cos(pitch)]])
-	rollRot=array([[1.,0.,0.],[0.,cos(roll),-sin(roll)],[0.,sin(roll),cos(roll)]])
-	Rot=dot(dot(yawRot,pitchRot),rollRot)
-	return Rot
 
 
-robotName = 'hrp10small'
+from dynamic_graph.sot.fmorsill.utility import *
+
+
+
+# --- ROBOT SIMU ---------------------------------------------------------------
+# --- ROBOT SIMU ---------------------------------------------------------------
+# --- ROBOT SIMU ---------------------------------------------------------------
+
+robotName = 'hrp14small'
 robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)
 dt=5e-3
 
-# Robot and drill in the origin
-xr=0.
-yr=0.
-zr=0.64870185118253043
-rollr=0.
-pitchr=0.
-yawr=0.
-
-xd = 0.4
-yd = -0.1
-zd = 1.1
-rolld = 0.
-pitchd = pi/5
-yawd = pi/2
-
-
-# Initial configuration
-# We give the absolute position of the robot and then extract the relative rototranslation to impose to the drill
 from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
-x0=-1.6
-y0=1.8
-z0=0.64870185118253043  #0.6487018512
-roll0=0.
-pitch0=0.
-yaw0=pi/2
 
-halfSittingConfig[robotName] = (x0,y0,z0,0,0,yaw0)+halfSittingConfig[robotName][6:]
-initialConfig[robotName]=halfSittingConfig[robotName]
+
+x0=0.
+y0=0.
+z0=0.64870185118253043
+halfSittingConfig[robotName] = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
+
+
+q0=list(halfSittingConfig[robotName])
+initialConfig[robotName]=tuple(q0)
+
 robot.set( initialConfig[robotName] )
 
-# Drill RotoTranslation / Homogeneous Matrix of the Drill. Normally given from the camera
-RTMatrix = eye(4); RTMatrix[0:3,0:3] = calcRotFromRPY(roll0-rollr,pitch0-pitchr,yaw0-yawr)
-RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
-newDrill = dot(RTMatrix,array([xd,yd,zd,1]))
-drillPos = vectorToTuple( newDrill[0:3] )
-DrillRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rolld,pitchd,yawd))
-drillOr = vectorToTuple(extractRPYFromRot(DrillRot))
-drill = drillPos + drillOr
+"""
 
-refToDrillMatrix = eye(4); refToDrillMatrix[0:3,0:3] = DrillRot; refToDrillMatrix[0:3,3] = newDrill[0:3]
+#for hrp14
+robot.set((-0.0351735,0.0170394,0.689482,6.95913e-24,6.62503e-23,0.0107048,-0.0107048,-0.0291253,-0.280304,0.410581,-0.130277,0.0291253,-0.0107048,-0.0291644,-0.298025,0.441124,-0.1431,0.0291644,0.0119509,-0.08704,-8.89686e-19,-4.55781e-20,-0.122966,-0.75002,0.497028,-1.85734,1.55327,0.410855,0.174533,-0.289009,-0.174232,-0.806603,-1.27773,-0.657843,0.683645,0.174533))
+"""
 
-# Homogeneous Matrixes of the handles. Known from the tool model
-drillToTriggerMatrix=eye(4)
-drillToTriggerMatrix[0:3,3] = (0.25,0.,0.)
-drillToSupportMatrix=eye(4)
-drillToSupportMatrix[0:3,3] = (-0.03,0.,0.)
-# Homogeneous Matrixes
-refToTriggerMatrix=dot(refToDrillMatrix,drillToTriggerMatrix)
-refToSupportMatrix=dot(refToDrillMatrix,drillToSupportMatrix)
-
-# visualization
+""" #for hrp10
+robot.set((-0.0680573,0.0549703,0.681123,5.3467e-26,9.25815e-26,0.0607429,-0.0607429,-0.0950824,-0.333218,0.445825,-0.112607,0.0950824,-0.0607429,-0.0951705,-0.380667,0.5136,-0.132932,0.0951705,-0.196613,-0.0799953,-0.00461902,0.00508595,-0.598498,-0.0548141,0.908472,-1.45118,1.70262,0.420043,0.462092,0.174533,-0.551393,-0.169999,0.403413,-1.33973,1.85,1.66127,0.0234165,0.174533))
+"""
 addRobotViewer(robot,small=True,verbose=True)
 robot.viewer.updateElementConfig('fov',[0,0,-10,3.14,0,0])
-robot.viewer.updateElementConfig('drill',drill)
+
+#-------------------------------------------------------------------------------
+#----- MAIN LOOP ---------------------------------------------------------------
+#-------------------------------------------------------------------------------
+from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
+@loopInThread
+def inc():
+    robot.increment(dt)
+    attime.run(robot.control.time)
+    updateComDisplay(robot,dyn.com)
+
+runner=inc()
+[go,stop,next,n]=loopShortcuts(runner)
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
@@ -148,6 +125,23 @@ sot = SolverKine('sot')
 sot.setSize(robotDim)
 plug(sot.control,robot.control)
 
+# ---- SCREW-DRIVER PARAMETERS -------------------------------------------------------------------
+# ---- SCREW-DRIVER PARAMETERS -------------------------------------------------------------------
+# ---- SCREW-DRIVER PARAMETERS -------------------------------------------------------------------
+
+# TwoHandTool
+xd = 0.4
+yd = 0.2
+zd = 1.1
+roll = 0.
+pitch = pi/5
+yaw = pi/2
+TwoHandTool = (xd,yd,zd,roll,pitch,yaw)
+robot.viewer.updateElementConfig('TwoHandTool',TwoHandTool)
+
+# Homogeneous Matrix of the TwoHandTool. Normally given from the camera
+refToTwoHandToolMatrix=eye(4); refToTwoHandToolMatrix[0:3,0:3]=calcRotFromRPY(roll,pitch,yaw)
+refToTwoHandToolMatrix[0:3,3] = (xd,yd,zd)
 
 # ---- TASKS -------------------------------------------------------------------
 # ---- TASKS -------------------------------------------------------------------
@@ -164,8 +158,11 @@ taskLH=MetaTaskKine6d('lh',dyn,'lh','left-wrist')
 taskLH.opmodif = matrixToTuple(handMgrip)
 taskLH.feature.frame('desired')
 
+# --- TASK COM (if not walking)
+taskCom = MetaTaskKineCom(dyn)
+
 # --- POSTURE ---
-taskPosture = MetaTaskKinePosture(dyn)
+#taskPosture = MetaTaskKinePosture(dyn)
 
 # --- GAZE ---
 taskGaze = MetaTaskVisualPoint('gaze',dyn,'head','gaze')
@@ -193,6 +190,18 @@ contactRF = MetaTaskKine6d('contactRF',dyn,'RF','right-ankle')
 contactRF.feature.frame('desired')
 contactRF.gain.setConstant(10)
 
+# --- TASK SUPPORT --------------------------------------------------
+featureSupport    = FeatureGeneric('featureSupport')
+plug(dyn.com,featureSupport.errorIN)
+plug(dyn.Jcom,featureSupport.jacobianIN)
+
+taskSupport=TaskInequality('taskSupport')
+taskSupport.add(featureSupport.name)
+taskSupport.selec.value = '011'
+taskSupport.referenceInf.value = (-0.09,-0.17,0)    # Xmin, Ymin
+taskSupport.referenceSup.value = (0.14,0.17,0)  # Xmax, Ymax
+taskSupport.dt.value=dt
+
 # --- TASK SUPPORT SMALL --------------------------------------------
 featureSupportSmall = FeatureGeneric('featureSupportSmall')
 plug(dyn.com,featureSupportSmall.errorIN)
@@ -201,31 +210,20 @@ plug(dyn.Jcom,featureSupportSmall.jacobianIN)
 taskSupportSmall=TaskInequality('taskSupportSmall')
 taskSupportSmall.add(featureSupportSmall.name)
 taskSupportSmall.selec.value = '011'
+#taskSupportSmall.referenceInf.value = (-0.02,-0.02,0)    # Xmin, Ymin
+#askSupportSmall.referenceSup.value = (0.02,0.02,0)  # Xmax, Ymax
+taskSupportSmall.referenceInf.value = (-0.02,-0.05,0)    # Xmin, Ymin
+taskSupportSmall.referenceSup.value = (0.02,0.05,0)  # Xmax, Ymax
 taskSupportSmall.dt.value=dt
 
 # ---- WAIST TASK ---
 taskWaist=MetaTask6d('waist',dyn,'waist','waist')
+#taskWaist.task.controlGain.value = 10
 gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function rot=0 --> we set a random position not to control it
 
-
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
-
-
-#-------------------------------------------------------------------------------
-#----- MAIN LOOP ---------------------------------------------------------------
-#-------------------------------------------------------------------------------
-from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
-@loopInThread
-def inc():
-    robot.increment(dt)
-    attime.run(robot.control.time)
-    updateComDisplay(robot,dyn.com)
-
-runner=inc()
-[go,stop,next,n]=loopShortcuts(runner)
-
 
 # --- TRACER -----------------------------------------------------------------
 # Record some signals in the /tmp directory. Use the octave script p.m to plot
@@ -269,38 +267,29 @@ SolverKine.toList = toList
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
+RAD=pi/180
 
-robot.increment(dt)
-updateComDisplay(robot,dyn.com)
+# Homogeneous Matrixes
+refToTriggerMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToTriggerMatrix)
+refToSupportMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToSupportMatrix)
 
-# Set the target for RH and LH task.
-#M=eye(4); M[0:3,3] = array([0.,-0.2,0.])
+"""	this part has been used for inertia information
+EdgeMatrix = eye(4); EdgeMatrix[0:3,3] = array([0.,0.03,0.])
+target = dot(refToTwoHandToolMatrix,EdgeMatrix)
+robot.viewer.updateElementConfig('zmp',vectorToTuple(target[0:3,3])+(0,0,0))
+"""
+
+# Set the target for RH and LH task. Selec is the activation flag (say control only
+# the XYZ translation), and gain is the adaptive gain (10 at the target, 0.1
+# far from it, with slope st. at 0.01m from the target, 90% of the max gain
+# value is reached
 taskRH.ref = matrixToTuple(refToSupportMatrix)
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain = (10,1,0.01,0.9)
+taskRH.gain.setByPoint(40,4,0.01,0.9)
+
 taskLH.ref = matrixToTuple(refToTriggerMatrix)
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain = (10,1,0.01,0.9)
-
-# Foot position recomputing
-dyn.LF.recompute(0)
-LFMatH = array(dyn.LF.value)
-LFx = LFMatH[0][3]
-LFy = LFMatH[1][3]
-#LFz = 0.105
-dyn.RF.recompute(0)
-RFMatH = array(dyn.RF.value)
-RFx = RFMatH[0][3]
-RFy = RFMatH[1][3]
-#RFz = 0.105
-
-center = array([(LFx+RFx)/2,(LFy+RFy)/2,0.])	# z not important
-
-# Set the aims
-contactLF.ref = matrixToTuple(LFMatH)
-contactRF.ref = matrixToTuple(RFMatH)
-taskSupportSmall.referenceInf.value = (center[0]-0.02,center[1]-0.05,0)    # Xmin, Ymin
-taskSupportSmall.referenceSup.value = (center[0]+0.05,center[1]+0.07,0)    # Xmax, Ymax
+taskLH.gain.setByPoint(40,4,0.01,0.9)
 
 # Set up the stack solver.
 sot.addContact(contactLF)
@@ -309,7 +298,7 @@ push(taskJL)
 push(taskRH)
 push(taskLH)
 push(taskWaist)
-push(taskSupportSmall)
+push(taskSupport)
 
 # And run.
 go()

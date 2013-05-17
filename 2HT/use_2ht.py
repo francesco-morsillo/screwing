@@ -1,7 +1,9 @@
 # ______________________________________________________________________________
 # ******************************************************************************
-# SIMPLEST EXAMPLE OF INVERSE KINEMATICS.
-# The robot operates with the tool from a given position.
+# FIRST EXAMPLE OF REAL USAGE OF THE TOOL.
+# Given a stack of aims (holes with specified z-orientation) the robot put the
+# screw driver in front of the hole and executes the screwing operation. To 
+# complete the goal changing
 # ______________________________________________________________________________
 # ******************************************************************************
 
@@ -26,7 +28,6 @@ from numpy import *
 from dynamic_graph.sot.core.utils.history import History
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
-
 
 from dynamic_graph.sot.fmorsill.utility import *
 
@@ -93,7 +94,7 @@ TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool
 
 
 # goals
-goal1 = (0.6,-0.1,1.3,0.,1.57,0.)
+goal1 = (0.6,-0.4,1.3,0.,1.57,0.)
 #goal1 = (-1.5,2.4,1.3,-1.57,0.,0.)
 goal2 = (-1.7,2.4,1.3,-1.57,0.,0.)
 goal3 = (-1.7,2.4,1.1,-1.57,0.,0.)
@@ -300,9 +301,9 @@ push(taskSupportSmall)
 
 # Static task options
 taskRH.feature.selec.value = '111111'	# RX no more free with the tool
-taskRH.gain = (1000,100,0.01,0.9)
+taskRH.gain.setByPoint(10,0.1,0.01,0.9)
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain = (1000,100,0.01,0.9)
+taskLH.gain.setByPoint(10,0.1,0.01,0.9)
 
 
 #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
