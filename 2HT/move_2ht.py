@@ -190,7 +190,7 @@ gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function ro
 
 
 # TwoHandTool Moving
-def tool_follow(task):
+def updateToolDisplay(taskrh):
 	tool = dot( array(task.feature.position.value) , linalg.inv(TwoHandToolToSupportMatrix) )
 	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+(roll,pitch,yaw))
 
@@ -274,6 +274,6 @@ while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
-	tool_follow(taskRH)
+	updateToolDisplay(taskRH)
 
 print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))

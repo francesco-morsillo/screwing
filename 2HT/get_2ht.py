@@ -271,11 +271,11 @@ robot.viewer.updateElementConfig('zmp',vectorToTuple(target[0:3,3])+(0,0,0))
 # value is reached
 taskRH.ref = matrixToTuple(refToSupportMatrix)
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain.setByPoint(10,0.1,0.01,0.9)
+taskRH.gain.setByPoint(30,0.3,0.01,0.9)
 
 taskLH.ref = matrixToTuple(refToTriggerMatrix)
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain.setByPoint(10,0.1,0.01,0.9)
+taskLH.gain.setByPoint(30,0.3,0.01,0.9)
 
 # Set up the stack solver.
 sot.addContact(contactLF)
