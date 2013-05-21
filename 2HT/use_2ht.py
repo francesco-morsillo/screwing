@@ -94,22 +94,27 @@ TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool
 
 
 # goals
-goal1 = (0.6,-0.4,1.3,0.,1.57,0.)
-#goal1 = (-1.5,2.4,1.3,-1.57,0.,0.)
+goal1 = array([0.6,-0.4,1.3,0.,1.57,0.])
+goal2 = array([0.6,-0.2,1.3,0.,1.57,0.])
+goal3 = array([0.6,-0.2,1.1,0.,1.57,0.])
+goal4 = array([0.6,-0.4,1.1,0.,1.57,0.])
+goal = array(goal1,goal2,goal3,goal4)
+
+"""
+goal1 = (-1.5,2.4,1.3,-1.57,0.,0.)
 goal2 = (-1.7,2.4,1.3,-1.57,0.,0.)
 goal3 = (-1.7,2.4,1.1,-1.57,0.,0.)
 goal4 = (-1.5,2.4,1.1,-1.57,0.,0.)
-
+"""
 
 
 # visualization
 addRobotViewer(robot,small=True,verbose=True)
 robot.viewer.updateElementConfig('fov',[0,0,-10,3.14,0,0])
 robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(TwoHandToolPos[0:3])+vectorToTuple(extractRPYFromRot(TwoHandToolRot)))
-robot.viewer.updateElementConfig('goal1',goal1)
-robot.viewer.updateElementConfig('goal2',goal2)
-robot.viewer.updateElementConfig('goal3',goal3)
-robot.viewer.updateElementConfig('goal4',goal4)
+for i in range(1,5):
+	robot.viewer.updateElementConfig('goal'+str(i),vectorToTuple(goal[i]))
+
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
@@ -286,17 +291,17 @@ center = array([(LFx+RFx)/2,(LFy+RFy)/2,0.])	# z not important
 # Set the aims
 contactLF.ref = matrixToTuple(LFMatH)
 contactRF.ref = matrixToTuple(RFMatH)
-taskSupportSmall.referenceInf.value = (center[0]-0.05,center[1]-0.13,0)    # Xmin, Ymin
-taskSupportSmall.referenceSup.value = (center[0]+0.10,center[1]+0.13,0)    # Xmax, Ymax
+dyn.com.recompute(0)
+taskCom.ref=dyn.com.value
 
 # Set up the stack solver.
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
+push(taskCom)
 push(taskRH)
 push(taskLH)
 push(taskWaist)
-push(taskSupportSmall)
 
 
 # Static task options
@@ -314,21 +319,10 @@ RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),ref
 # The hands have to cover the same displacement, but in a different reference
 RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
-ep = 1 # random
-change_goal = True
-state = 0
-goalGlobal = None
-
-def posErrCalc(goal,RHToScrewMatrix):
-	screwMatrix = dot(array(taskRH.feature.position.value),RHToScrewMatrix)
-	#global ep
-	ep = linalg.norm(goal - screwMatrix[0:3,3])
-	return ep
 
 
-def new_goal(goal):
+def go_to(goal,pos_err_des):
 
-	taskRH.feature.position.recompute
 	refToTwoHandToolMatrix = dot(array(taskRH.feature.position.value),RHToTwoHandToolMatrix)
 
 	# Homogeneous Matrixe from the reference to the screw
@@ -357,6 +351,24 @@ def new_goal(goal):
 	AimRHMatrix = eye(4); AimRHMatrix[0:4,3] = RHDisplacement
 	taskRH.ref = matrixToTuple(dot(array(taskRH.feature.position.value),AimRHMatrix))
 	taskLH.ref = matrixToTuple(dot(array(taskRH.ref),TwoHandSupportToTriggerMatrix))	
+
+
+
+
+
+
+
+
+
+
+
+
+change_goal = True
+state = 0
+goalGlobal = None
+
+
+
 
 
 
@@ -390,6 +402,14 @@ runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
 
 
-# And run
-go()
+
+
+
+
+
+
+
+
+
+
 

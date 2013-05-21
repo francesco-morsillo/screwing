@@ -198,23 +198,6 @@ def tool_follow(task):
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
 
-
-#-------------------------------------------------------------------------------
-#----- MAIN LOOP ---------------------------------------------------------------
-#-------------------------------------------------------------------------------
-from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
-@loopInThread
-def inc():
-    robot.increment(dt)
-    attime.run(robot.control.time)
-    updateComDisplay(robot,dyn.com)
-    # Move the TwoHandTool
-    tool_follow(taskRH)
-
-runner=inc()
-[go,stop,next,n]=loopShortcuts(runner)
-
-
 # --- TRACER -----------------------------------------------------------------
 # Record some signals in the /tmp directory. Use the octave script p.m to plot
 # them.
@@ -285,5 +268,12 @@ push(taskLH)
 push(taskWaist)
 push(taskSupportSmall)
 
-# And run.
-go()
+
+taskRH.feature.error.recompute(robot.control.time)
+while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
+	robot.increment(dt)
+	attime.run(robot.control.time)
+	updateComDisplay(robot,dyn.com)
+	tool_follow(taskRH)
+
+print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))

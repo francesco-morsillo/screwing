@@ -70,19 +70,6 @@ robot.set((-0.0680573,0.0549703,0.681123,5.3467e-26,9.25815e-26,0.0607429,-0.060
 addRobotViewer(robot,small=True,verbose=True)
 robot.viewer.updateElementConfig('fov',[0,0,-10,3.14,0,0])
 
-#-------------------------------------------------------------------------------
-#----- MAIN LOOP ---------------------------------------------------------------
-#-------------------------------------------------------------------------------
-from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
-@loopInThread
-def inc():
-    robot.increment(dt)
-    attime.run(robot.control.time)
-    updateComDisplay(robot,dyn.com)
-
-runner=inc()
-[go,stop,next,n]=loopShortcuts(runner)
-
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -131,7 +118,7 @@ plug(sot.control,robot.control)
 
 # TwoHandTool
 xd = 0.4
-yd = 0.2
+yd = -0.2
 zd = 1.1
 roll = 0.
 pitch = pi/5
@@ -218,7 +205,6 @@ taskSupportSmall.dt.value=dt
 
 # ---- WAIST TASK ---
 taskWaist=MetaTask6d('waist',dyn,'waist','waist')
-#taskWaist.task.controlGain.value = 10
 gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function rot=0 --> we set a random position not to control it
 
 # --- OTHER CONFIGS ----------------------------------------------------------
@@ -285,20 +271,31 @@ robot.viewer.updateElementConfig('zmp',vectorToTuple(target[0:3,3])+(0,0,0))
 # value is reached
 taskRH.ref = matrixToTuple(refToSupportMatrix)
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain.setByPoint(40,4,0.01,0.9)
+taskRH.gain.setByPoint(10,0.1,0.01,0.9)
 
 taskLH.ref = matrixToTuple(refToTriggerMatrix)
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain.setByPoint(40,4,0.01,0.9)
+taskLH.gain.setByPoint(10,0.1,0.01,0.9)
 
 # Set up the stack solver.
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
+push(taskSupport)
+push(taskWaist)
 push(taskRH)
 push(taskLH)
-push(taskWaist)
-push(taskSupport)
 
-# And run.
-go()
+taskRH.feature.error.recompute(robot.control.time)
+while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
+	robot.increment(dt)
+	attime.run(robot.control.time)
+	updateComDisplay(robot,dyn.com)
+
+print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
+
+
+
+
+
+

@@ -49,7 +49,7 @@ pitchr=0.
 yawr=0.
 
 xd = 0.4
-yd = -0.1
+yd = -0.2
 zd = 1.1
 rolld = 0.
 pitchd = pi/5
@@ -197,20 +197,6 @@ gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function ro
 # --- OTHER CONFIGS ----------------------------------------------------------
 
 
-#-------------------------------------------------------------------------------
-#----- MAIN LOOP ---------------------------------------------------------------
-#-------------------------------------------------------------------------------
-from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
-@loopInThread
-def inc():
-    robot.increment(dt)
-    attime.run(robot.control.time)
-    updateComDisplay(robot,dyn.com)
-
-runner=inc()
-[go,stop,next,n]=loopShortcuts(runner)
-
-
 # --- TRACER -----------------------------------------------------------------
 # Record some signals in the /tmp directory. Use the octave script p.m to plot
 # them.
@@ -260,11 +246,11 @@ updateComDisplay(robot,dyn.com)
 # Set the target for RH and LH task.
 taskRH.ref = matrixToTuple(refToSupportMatrix)
 taskRH.feature.selec.value = '110111'	# RX free
-taskRH.gain.setByPoint(40,4,0.01,0.9)
+taskRH.gain.setByPoint(10,0.1,0.01,0.9)
 
 taskLH.ref = matrixToTuple(refToTriggerMatrix)
 taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain.setByPoint(40,4,0.01,0.9)
+taskLH.gain.setByPoint(10,0.1,0.01,0.9)
 
 # Foot position recomputing
 dyn.LF.recompute(0)
@@ -290,10 +276,16 @@ taskSupportSmall.referenceSup.value = (center[0]+0.05,center[1]+0.07,0)    # Xma
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
+push(taskSupportSmall)
 push(taskRH)
 push(taskLH)
 push(taskWaist)
-push(taskSupportSmall)
 
-# And run.
-go()
+taskRH.feature.error.recompute(robot.control.time)
+while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
+	robot.increment(dt)
+	attime.run(robot.control.time)
+	updateComDisplay(robot,dyn.com)
+
+print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
+
