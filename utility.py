@@ -106,6 +106,11 @@ OneHandToolToScrewMatrix=array([[0.,0.,-1,-0.12],[0.,1.,0.,0.],[1.,0.,0.,0.],[0.
 OneHandScrewToTriggerMatrix=dot(linalg.inv(OneHandToolToScrewMatrix),OneHandToolToTriggerMatrix)
 
 
+### Demanded errors -------------------------------------------------------------------
+
+# Position Error
+pos_err_des = 0.0001
+
 
 
 
