@@ -110,10 +110,6 @@ OneHandScrewToTriggerMatrix=dot(linalg.inv(OneHandToolToScrewMatrix),OneHandTool
 
 # Position Error
 pos_err_des = 0.0001
-def position_error(task):
-	task.recompute(robot.control.time)
-	return linalg.norm( array(task.ref)[0:3,3] - array(task.feature.position.value)[0:3,3] )
-
 
 
 
