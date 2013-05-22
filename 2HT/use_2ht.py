@@ -30,6 +30,7 @@ from dynamic_graph.sot.core.utils.history import History
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 
 from dynamic_graph.sot.fmorsill.utility import *
+from dynamic_graph.sot.fmorsill.rob_view_lib import *
 
 # --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
 # --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
@@ -80,7 +81,7 @@ robot.set()"""
 
 # Center initial configuration
 #for hrp14
-robot.set((-0.0321239,0.0295696,0.689348,-2.73571e-19,-2.4299e-19,-0.000464104,0.000464104,-0.0504835,-0.268343,0.395009,-0.126666,0.0504835,0.000464104,-0.0506361,-0.296723,0.451101,-0.154379,0.0506361,-0.0241758,-0.0871973,-1.82436e-17,-3.09881e-18,-0.191161,-0.765804,0.554113,-1.83012,1.50936,0.393544,0.174533,-0.293434,-0.155129,-0.820303,-1.3099,-0.619151,0.740306,0.174533))
+robot.set((-0.0351735,0.0170394,0.689482,6.95913e-24,6.62503e-23,0.0107048,-0.0107048,-0.0291253,-0.280304,0.410581,-0.130277,0.0291253,-0.0107048,-0.0291644,-0.298025,0.441124,-0.1431,0.0291644,0.0119509,-0.08704,-8.89686e-19,-4.55781e-20,-0.122966,-0.75002,0.497028,-1.85734,1.55327,0.410855,0.174533,-0.289009,-0.174232,-0.806603,-1.27773,-0.657843,0.683645,0.174533))
 
 # Screw Lenght
 screw_len = 0.
@@ -91,12 +92,19 @@ RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
 TwoHandToolPos = dot(RTMatrix,array([xTool,yTool,zTool,1]))	# HOMOGENEOUS POSITION!! CUT OFF THE 1 TO USE IT :-)
 TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool))
 
+"""
+# goals with no dumping
+goal4 = array([0.5,-0.2,1.3,0.,1.57,0.])
+goal3 = array([0.5,-0.3,1.3,0.,1.57,0.])
+goal1 = array([0.5,-0.3,1.2,0.,1.57,0.])
+goal2 = array([0.5,-0.2,1.2,0.,1.57,0.])
+"""
+# goals with dumping
+goal2 = array([0.5,-0.1,1.3,0.,1.57,0.])
+goal4 = array([0.5,-0.3,1.3,0.,1.57,0.])
+goal1 = array([0.5,-0.3,1.1,0.,1.57,0.])
+goal3 = array([0.5,-0.1,1.1,0.,1.57,0.])
 
-# goals
-goal1 = array([0.5,-0.2,1.35,0.,1.57,0.])
-goal2 = array([0.5,-0.3,1.35,0.,1.57,0.])
-goal3 = array([0.5,-0.3,1.25,0.,1.57,0.])
-goal4 = array([0.5,-0.2,1.25,0.,1.57,0.])
 goal = array([goal1,goal2,goal3,goal4])
 
 """
@@ -105,6 +113,7 @@ goal2 = (-1.7,2.4,1.3,-1.57,0.,0.)
 goal3 = (-1.7,2.4,1.1,-1.57,0.,0.)
 goal4 = (-1.5,2.4,1.1,-1.57,0.,0.)
 """
+
 
 
 # visualization
@@ -219,12 +228,6 @@ gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function ro
 # --- TASK COM (if not walking)
 taskCom = MetaTaskKineCom(dyn)
 
-
-# TwoHandTool Moving
-def updateToolDisplay(taskrh):
-	tool = dot( array(taskrh.feature.position.value) , linalg.inv(TwoHandToolToSupportMatrix) )
-	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+(rollTool,pitchTool,yawTool))
-
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
@@ -323,13 +326,23 @@ RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),ref
 # The hands have to cover the same displacement, but in a different reference
 RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
+# dumping
+sot.damping.value = 0.1
+
+# Motion recording
+zmp_out = open("/tmp/data.zmp","w")
+hip_out = open("/tmp/data.hip","w")
+pos_out = open("/tmp/data.pos","w")
 
 
 def do():
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
-	updateToolDisplay(taskRH)
+	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
+	record_zmp(robot,dyn,zmp_out,dt)
+	record_hip(robot,dyn,hip_out,dt)
+	record_pos(robot,dyn,pos_out,dt)
 
 def go_to(goal,pos_err_des,screw_len):
 
