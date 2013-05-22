@@ -33,6 +33,8 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,rob
 
 robotName = 'hrp14small'
 robotDim=robotDimension[robotName]
+
+"""
 robot = RobotSimu("robot")
 robot.resize(robotDim)
 dt=5e-3
@@ -47,7 +49,7 @@ q0=list(halfSittingConfig[robotName])
 initialConfig[robotName]=tuple(q0)
 
 robot.set( initialConfig[robotName] )
-addRobotViewer(robot,small=True,verbose=True)
+"""
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
@@ -142,22 +144,6 @@ contactRF.gain.setConstant(10)
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
 
-# --- TRACER -----------------------------------------------------------------
-# Record some signals in the /tmp directory. Use the octave script p.m to plot
-# them.
-# p('com',1:2)   % Plot the X and Y components of the COM file (dyn.com signal).
-
-from dynamic_graph.tracer import *
-tr = Tracer('tr')
-tr.open('/tmp/','','.dat')
-tr.start()
-robot.after.addSignal('tr.triger')
-
-tr.add('dyn.com','com')
-tr.add(taskJL.name+".normalizedPosition","qn")
-robot.after.addSignal(taskJL.name+".normalizedPosition")
-tr.add(taskRH.task.name+'.error','erh')
-
 # --- SHORTCUTS ----------------------------------------------------------------
 def push(task):
     '''Add a task at the least priority of the stack.'''
@@ -191,11 +177,8 @@ dyn.com.recompute(0)
 taskCom.featureDes.errorIN.value = dyn.com.value
 taskCom.task.controlGain.value = 10
 
-# Set the target for RH task. Third arg is an activation flag (say control only
-# the XYZ translation), and last arg is the (constant) gain.
 target=(0.5,-0.2,1.3)
 gotoNd(taskRH,target,'000111',0.1/dt)
-robot.viewer.updateElementConfig('zmp',target+(0,0,0))
 
 # Set up the stack solver.
 sot.addContact(contactLF)

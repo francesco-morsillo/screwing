@@ -29,6 +29,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,rob
 
 
 from dynamic_graph.sot.fmorsill.utility import *
+from dynamic_graph.sot.fmorsill.rob_view_lib import *
 
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
@@ -192,48 +193,18 @@ gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function ro
 taskCom = MetaTaskKineCom(dyn)
 
 
-
-# TwoHandTool Moving
-def tool_follow(task):
-	tool = dot( array(task.feature.position.value) , linalg.inv(TwoHandToolToSupportMatrix) )
-	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+(roll,pitch,yaw))
-
-
 # Motion recording
 zmp_out = open("/tmp/data.zmp","w")
 hip_out = open("/tmp/data.hip","w")
 pos_out = open("/tmp/data.pos","w")
 
-def record_zmp():
-	zmp_out.write(str(robot.control.time*dt)+"\t")
-	ZMP = array(dyn.com.value)
-	ZMP[2] = 0. #-0.645
-
-	# extract waist position
-	ZMP = dot( linalg.inv(array(dyn.waist.value)) , hstack([ZMP,1]))	
-
-	for i in range(3):
-		zmp_out.write(str(ZMP[i])+"\t")
-	zmp_out.write("\n")
-
-def record_hip():
-	hip_out.write(str(robot.control.time*dt)+"\t")
-	HIP = dyn.position.value[3:6]
-	for i in range(3):
-		hip_out.write(str(HIP[i])+"\t")
-	hip_out.write("\n")
-
-def record_pos():
-	pos_out.write(str(robot.control.time*dt)+"\t")
-	POS = [0]*40
-	POS[0:30] = dyn.position.value[6:36]
-	for i in range(40):
-		pos_out.write(str(POS[i])+"\t")
-	pos_out.write("\n")
 
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
+
+
+RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 
 
 #-------------------------------------------------------------------------------
@@ -246,10 +217,10 @@ def inc():
     attime.run(robot.control.time)
     updateComDisplay(robot,dyn.com)
     # Move the TwoHandTool
-    tool_follow(taskRH)
-    record_zmp()
-    record_pos()
-    record_hip()
+    updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
+    record_zmp(robot,dyn,zmp_out,dt)
+    record_hip(robot,dyn,hip_out,dt)
+    record_pos(robot,dyn,pos_out,dt)
 
     if linalg.norm(array(taskRH.feature.position.value)[0:3,3] - array(taskRH.ref)[0:3,3])<0.001:
 	displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.03,0.,0.])

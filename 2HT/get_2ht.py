@@ -137,7 +137,7 @@ refToTwoHandToolMatrix[0:3,3] = (xd,yd,zd)
 # ---- TASK HANDS PLACEMENT
 # RIGHT HAND
 taskRH=MetaTaskKine6d('rh',dyn,'rh','right-wrist')
-handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.17)
+handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.14)
 taskRH.opmodif = matrixToTuple(handMgrip)
 taskRH.feature.frame('desired')
 # LEFT HAND
