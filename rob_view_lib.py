@@ -8,8 +8,9 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rota
 
 
 #---------------TOOL DISPLAY-------------------------------------------------------------------------------
-def updateToolDisplay(taskrh,RHToTwoHandToolMatrix,robot):
-	tool = dot( array(taskrh.feature.position.value) , RHToTwoHandToolMatrix )
+def updateToolDisplay(task,displacement,robot):
+	task.feature.position.recompute(robot.control.time)
+	tool = dot( array(task.feature.position.value) , displacement )
 	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+vectorToTuple(extractRPYFromRot(tool[0:3,0:3])) )
 
 def record_zmp(robot,dyn,zmp_out,dt):

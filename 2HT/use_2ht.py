@@ -92,7 +92,7 @@ RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
 TwoHandToolPos = dot(RTMatrix,array([xTool,yTool,zTool,1]))	# HOMOGENEOUS POSITION!! CUT OFF THE 1 TO USE IT :-)
 TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool))
 
-"""
+
 # goals with no dumping
 goal4 = array([0.5,-0.2,1.3,0.,1.57,0.])
 goal3 = array([0.5,-0.3,1.3,0.,1.57,0.])
@@ -104,7 +104,7 @@ goal2 = array([0.5,-0.1,1.3,0.,1.57,0.])
 goal4 = array([0.5,-0.3,1.3,0.,1.57,0.])
 goal1 = array([0.5,-0.3,1.1,0.,1.57,0.])
 goal3 = array([0.5,-0.1,1.1,0.,1.57,0.])
-
+"""
 goal = array([goal1,goal2,goal3,goal4])
 
 """
@@ -113,7 +113,6 @@ goal2 = (-1.7,2.4,1.3,-1.57,0.,0.)
 goal3 = (-1.7,2.4,1.1,-1.57,0.,0.)
 goal4 = (-1.5,2.4,1.1,-1.57,0.,0.)
 """
-
 
 
 # visualization
@@ -301,15 +300,17 @@ COM_REF[2] = 0.
 taskCom.ref=vectorToTuple(COM_REF)
 taskCom.feature.selec.value= '111011' # z not controlled --> the robot can go up and down
 
-# Set up the stack solver.
-sot.addContact(contactLF)
-sot.addContact(contactRF)
-push(taskJL)
-push(taskCom)
-push(taskRH)
-push(taskLH)
-push(taskWaist)
-
+# Set relative feature for the left hand
+taskRH.feature.position.recompute(robot.control.time)
+taskLH.feature.position.recompute(robot.control.time)
+print str(taskLH.feature.position)
+#dyn.signal('rh').recompute(robot.control.time)
+#dyn.signal('lh').recompute(robot.control.time)
+#fRel = FeaturePositionRelative("featureRellh", dyn.signal('rh'), dyn.signal('lh'), dyn.signal('rh').value, dot(array(dyn.signal('rh').value),TwoHandSupportToTriggerMatrix), dyn.signal('Jrh'), dyn.signal('Jlh'))
+fRel = FeaturePositionRelative("featureRellh", taskRH.feature.position, taskLH.feature.position, taskRH.feature.position.value, taskLH.feature.position.value, taskRH.feature.jacobian, taskLH.feature.jacobian)
+taskLH.featureDes=fRel
+taskLH.task.clear()
+taskLH.task.add(fRel.name)
 
 # Static task options
 taskRH.feature.selec.value = '111111'	# RX no more free with the tool
@@ -323,8 +324,12 @@ taskRH.feature.position.recompute(0)
 refToTwoHandToolMatrix = eye(4); refToTwoHandToolMatrix[0:3,0:3] = TwoHandToolRot; refToTwoHandToolMatrix[0:3,3] = TwoHandToolPos[0:3]
 RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 #!!!!!! RH and Support are different references, because the X rotation is not controlled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# The hands have to cover the same displacement, but in a different reference
 RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
+
+# TASK SCREW creation
+taskScrew=MetaTaskKine6d('rh',dyn,'rh','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
+taskScrew.feature.selec.value = '011111'
+taskScrew.gain.setByPoint(10,0.1,0.01,0.9)
 
 # dumping
 sot.damping.value = 0.1
@@ -335,11 +340,22 @@ hip_out = open("/tmp/data.hip","w")
 pos_out = open("/tmp/data.pos","w")
 
 
+# Set up the stack solver.
+sot.addContact(contactLF)
+sot.addContact(contactRF)
+push(taskJL)
+push(taskCom)
+#push(taskLH)
+push(taskScrew)
+push(taskWaist)
+
+
+
 def do():
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
-	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
+	updateToolDisplay(taskScrew,linalg.inv(TwoHandToolToScrewMatrix),robot)
 	record_zmp(robot,dyn,zmp_out,dt)
 	record_hip(robot,dyn,hip_out,dt)
 	record_pos(robot,dyn,pos_out,dt)
@@ -350,48 +366,31 @@ def go_to(goal,pos_err_des,screw_len):
 	refToGoalMatrix = eye(4); refToGoalMatrix[0:3,0:3]=calcRotFromRPY(goal[3],goal[4],goal[5]); refToGoalMatrix[0:3,3]=goal[0:3]
 
 	# Preparation position
-	preparation = dot(refToGoalMatrix,array([0.,0.,-0.03-screw_len,1]))
+	preparationMatrix = dot(refToGoalMatrix,array([[1.,0.,0.,0.],[0.,1.,0.,0.],[0.,0.,1.,-0.03-screw_len],[0.,0.,0.,1.]]))
 
 	# mini-task sequence definition
-	action = array([preparation[0:3],goal[0:3],preparation[0:3]])
+	action = array([preparationMatrix,refToGoalMatrix,preparationMatrix])
 
 	robot.before.addSignal(taskRH.feature.name+".error")
 
 	for i in range(3):
 
-		#print "action = "+str(action[i])
-
+		
 		# Goal display
 		robot.viewer.updateElementConfig('zmp',vectorToTuple(action[i])+(0.,0.,0.))
-
-		# "Localization"
-		refToTwoHandToolMatrix = dot(array(taskRH.feature.position.value),RHToTwoHandToolMatrix)
-		refToScrewMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
-		# from RH to a mat oriented as Screw, but centered in RH
-		RH2ToScrewMatrix = eye(4); RH2ToScrewMatrix[0:3,0:3] = RHToScrewMatrix[0:3,0:3]; RH2ToScrewMatrix[0:3,3] = array([0.,0.,0.])
-
-		# Determine the goal displacement in the screw reference
-		screwDisplacement = dot(linalg.inv(refToScrewMatrix),hstack((action[i],1)))	# position=goal, homogeneous vector
-		# and in the RH2 reference
-		RHDisplacement = dot(RH2ToScrewMatrix,screwDisplacement)
-
-		# Set the target for RH and LH task
-		# To block the orientation on the screw-driver axis we have to use the actual position of the hands
-		AimRHMatrix = eye(4); AimRHMatrix[0:4,3] = RHDisplacement
-		taskRH.ref = matrixToTuple(dot(array(taskRH.feature.position.value),AimRHMatrix))
-		taskLH.ref = matrixToTuple(dot(array(taskRH.ref),TwoHandSupportToTriggerMatrix))
-
+		
+		# Aim setting
+		taskScrew.ref = matrixToTuple(action[i])
 		do()
-		while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
+		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > pos_err_des:
 			do()
 
 
 
-
+a = raw_input("ss")
 for i in range(4):
 	go_to(goal[i],pos_err_des,screw_len)
 
-#go_to(goal1,pos_err_des,screw_len)
 
 print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
 

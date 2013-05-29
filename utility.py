@@ -109,7 +109,7 @@ OneHandScrewToTriggerMatrix=dot(linalg.inv(OneHandToolToScrewMatrix),OneHandTool
 ### Demanded errors -------------------------------------------------------------------
 
 # Position Error
-pos_err_des = 0.0001
+pos_err_des = 0.000001
 
 
 

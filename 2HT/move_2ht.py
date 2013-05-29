@@ -29,6 +29,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,rob
 
 
 from dynamic_graph.sot.fmorsill.utility import *
+from dynamic_graph.sot.fmorsill.rob_view_lib import *
 
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
@@ -188,12 +189,6 @@ taskSupportSmall.dt.value=dt
 taskWaist=MetaTask6d('waist',dyn,'waist','waist')
 gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function rot=0 --> we set a random position not to control it
 
-
-# TwoHandTool Moving
-def updateToolDisplay(taskrh):
-	tool = dot( array(task.feature.position.value) , linalg.inv(TwoHandToolToSupportMatrix) )
-	robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(tool[0:3,3])+(roll,pitch,yaw))
-
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
 # --- OTHER CONFIGS ----------------------------------------------------------
@@ -213,6 +208,8 @@ tr.add('dyn.com','com')
 tr.add(taskJL.name+".normalizedPosition","qn")
 robot.after.addSignal(taskJL.name+".normalizedPosition")
 tr.add(taskRH.task.name+'.error','erh')
+
+tr.add(taskLH.task.name+'.error','elh')
 
 # --- SHORTCUTS ----------------------------------------------------------------
 def push(task):
@@ -252,8 +249,16 @@ displacementMatrix=eye(4); displacementMatrix[0:3,3] = array([0.2,0.,0.])
 taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
 taskRH.feature.selec.value = '110111'	# RX free
 taskRH.gain.setByPoint(10,0.1,0.01,0.9)
-taskLH.ref = matrixToTuple(dot(displacementMatrix,refToTriggerMatrix))
+
+# Set relative feature for the left hand
+#dot(array(dyn.signal('rh').value),TwoHandSupportToTriggerMatrix)
+dyn.signal('rh').recompute(robot.control.time)
+dyn.signal('lh').recompute(robot.control.time)
+fRel = FeaturePositionRelative("featureRellh", dyn.signal('rh'), dyn.signal('lh'), dyn.signal('rh').value, dyn.signal('lh').value, dyn.signal('Jrh'), dyn.signal('Jlh'))
+taskLH.feature=fRel
 taskLH.feature.selec.value = '110111'	# RX free
+taskLH.task.clear()
+taskLH.task.add(fRel.name)
 taskLH.gain.setByPoint(10,0.1,0.01,0.9)
 
 ScrewGolMatrix = dot(displacementMatrix,refToScrewMatrix)
@@ -263,17 +268,19 @@ robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
-push(taskRH)
 push(taskLH)
+push(taskRH)
 push(taskWaist)
 push(taskSupportSmall)
 
+taskRH.feature.position.recompute(robot.control.time)
+RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 
 taskRH.feature.error.recompute(robot.control.time)
 while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
-	updateToolDisplay(taskRH)
+	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
 
 print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
