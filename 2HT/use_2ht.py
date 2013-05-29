@@ -92,7 +92,7 @@ RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
 TwoHandToolPos = dot(RTMatrix,array([xTool,yTool,zTool,1]))	# HOMOGENEOUS POSITION!! CUT OFF THE 1 TO USE IT :-)
 TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool))
 
-
+"""
 # goals with no dumping
 goal4 = array([0.5,-0.2,1.3,0.,1.57,0.])
 goal3 = array([0.5,-0.3,1.3,0.,1.57,0.])
@@ -104,7 +104,7 @@ goal2 = array([0.5,-0.1,1.3,0.,1.57,0.])
 goal4 = array([0.5,-0.3,1.3,0.,1.57,0.])
 goal1 = array([0.5,-0.3,1.1,0.,1.57,0.])
 goal3 = array([0.5,-0.1,1.1,0.,1.57,0.])
-"""
+
 goal = array([goal1,goal2,goal3,goal4])
 
 """
@@ -113,6 +113,7 @@ goal2 = (-1.7,2.4,1.3,-1.57,0.,0.)
 goal3 = (-1.7,2.4,1.1,-1.57,0.,0.)
 goal4 = (-1.5,2.4,1.1,-1.57,0.,0.)
 """
+
 
 
 # visualization
@@ -338,7 +339,6 @@ sot.damping.value = 0.1
 zmp_out = open("/tmp/data.zmp","w")
 hip_out = open("/tmp/data.hip","w")
 pos_out = open("/tmp/data.pos","w")
-
 
 # Set up the stack solver.
 sot.addContact(contactLF)
