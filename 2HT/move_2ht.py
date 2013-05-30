@@ -17,6 +17,7 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rota
 from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
 from dynamic_graph.sot.core.meta_tasks import setGain
 from dynamic_graph.sot.core.meta_tasks_kine import *
+from dynamic_graph.sot.core.meta_tasks_kine_relative import MetaTaskKine6dRel
 from dynamic_graph.sot.core.meta_task_posture import MetaTaskKinePosture
 from dynamic_graph.sot.core.meta_task_visual_point import MetaTaskVisualPoint
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
@@ -143,6 +144,11 @@ taskRH.feature.frame('desired')
 taskLH=MetaTaskKine6d('lh',dyn,'lh','left-wrist')
 taskLH.opmodif = matrixToTuple(handMgrip)
 taskLH.feature.frame('desired')
+# RELATIVE POSITION TASK
+taskRel = MetaTaskKine6dRel('taskRel',dyn,'rh','lh','right-wrist','left-wrist')
+taskRel.opmodif = matrixToTuple(handMgrip)
+taskRel.opmodifBase = matrixToTuple(handMgrip)
+taskRel.feature.frame('desired')
 
 # --- POSTURE ---
 taskPosture = MetaTaskKinePosture(dyn)
@@ -209,7 +215,7 @@ tr.add(taskJL.name+".normalizedPosition","qn")
 robot.after.addSignal(taskJL.name+".normalizedPosition")
 tr.add(taskRH.task.name+'.error','erh')
 
-tr.add(taskLH.task.name+'.error','elh')
+tr.add(taskRel.task.name+'.error','elh')
 
 # --- SHORTCUTS ----------------------------------------------------------------
 def push(task):
@@ -250,16 +256,13 @@ taskRH.ref = matrixToTuple(dot(displacementMatrix,refToSupportMatrix))
 taskRH.feature.selec.value = '110111'	# RX free
 taskRH.gain.setByPoint(10,0.1,0.01,0.9)
 
-# Set relative feature for the left hand
-#dot(array(dyn.signal('rh').value),TwoHandSupportToTriggerMatrix)
-dyn.signal('rh').recompute(robot.control.time)
-dyn.signal('lh').recompute(robot.control.time)
-fRel = FeaturePositionRelative("featureRellh", dyn.signal('rh'), dyn.signal('lh'), dyn.signal('rh').value, dyn.signal('lh').value, dyn.signal('Jrh'), dyn.signal('Jlh'))
-taskLH.feature=fRel
-taskLH.feature.selec.value = '110111'	# RX free
-taskLH.task.clear()
-taskLH.task.add(fRel.name)
-taskLH.gain.setByPoint(10,0.1,0.01,0.9)
+# Set relative feature between the hands
+taskRH.feature.position.recompute(0)
+taskLH.feature.position.recompute(0)
+taskRel.featureDes.position.value = taskRH.feature.position.value
+taskRel.featureDes.positionRef.value = taskLH.feature.position.value
+taskRel.feature.selec.value = '110111'	# RX free
+taskRel.gain.setByPoint(10,0.1,0.01,0.9)
 
 ScrewGolMatrix = dot(displacementMatrix,refToScrewMatrix)
 robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0,0))
@@ -268,7 +271,7 @@ robot.viewer.updateElementConfig('zmp',vectorToTuple(ScrewGolMatrix[0:3,3])+(0,0
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
-push(taskLH)
+push(taskRel)
 push(taskRH)
 push(taskWaist)
 push(taskSupportSmall)

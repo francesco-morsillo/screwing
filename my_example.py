@@ -17,6 +17,7 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rota
 from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
 from dynamic_graph.sot.core.meta_tasks import setGain
 from dynamic_graph.sot.core.meta_tasks_kine import *
+from dynamic_graph.sot.core.meta_tasks_kine_relative import MetaTaskKine6dRel
 from dynamic_graph.sot.core.meta_task_posture import MetaTaskKinePosture
 from dynamic_graph.sot.core.meta_task_visual_point import MetaTaskVisualPoint
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
@@ -216,9 +217,29 @@ robot.viewer.updateElementConfig('zmp',target+(0,0,0))
 # value is reached)
 gotoNd(taskRH,target,'000111',(5,1,0.01,0.9))
 
+
+### TASK RELATIVE
+taskRel = MetaTaskKine6dRel('taskRel',dyn,'rh','lh','right-wrist','left-wrist')
+taskRel.opmodif = matrixToTuple(handMgrip)
+taskRel.opmodifBase = matrixToTuple(handMgrip)
+taskRel.feature.frame('desired')
+"""
+taskRH.feature.position.recompute(0)
+taskLH.feature.position.recompute(0)
+taskRel.featureDes.position.value = taskRH.feature.position.value
+taskRel.featureDes.positionRef.value = taskLH.feature.position.value
+"""
+Disp = eye(4); Disp[0:3,3]=array([0.,0.5,0.])
+taskRel.featureDes.position.value = eye(4)
+taskRel.featureDes.positionRef.value = Disp
+
+taskRel.feature.selec.value = '111111'
+taskRel.gain.setByPoint(10,0.1,0.01,0.9)
+
 # Set up the stack solver.
 sot.addContact(contactLF)
 sot.addContact(contactRF)
+push(taskRel)
 push(taskRH)
 push(taskCom)
 

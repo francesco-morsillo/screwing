@@ -12,13 +12,14 @@ from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
-import dynamic_graph.script_shortcuts
-from dynamic_graph.script_shortcuts import optionalparentheses
-from dynamic_graph.matlab import matlab
+#import dynamic_graph.script_shortcuts
+#from dynamic_graph.script_shortcuts import optionalparentheses
+#from dynamic_graph.matlab import matlab
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
 from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
 from dynamic_graph.sot.core.meta_tasks import setGain
 from dynamic_graph.sot.core.meta_tasks_kine import *
+from dynamic_graph.sot.core.meta_tasks_kine_relative import MetaTaskKine6dRel
 from dynamic_graph.sot.core.meta_task_posture import MetaTaskKinePosture
 from dynamic_graph.sot.core.meta_task_visual_point import MetaTaskVisualPoint
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
@@ -92,8 +93,8 @@ RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
 TwoHandToolPos = dot(RTMatrix,array([xTool,yTool,zTool,1]))	# HOMOGENEOUS POSITION!! CUT OFF THE 1 TO USE IT :-)
 TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool))
 
-"""
-# goals with no dumping
+
+#goals with no dumping
 goal4 = array([0.5,-0.2,1.3,0.,1.57,0.])
 goal3 = array([0.5,-0.3,1.3,0.,1.57,0.])
 goal1 = array([0.5,-0.3,1.2,0.,1.57,0.])
@@ -104,7 +105,7 @@ goal2 = array([0.5,-0.1,1.3,0.,1.57,0.])
 goal4 = array([0.5,-0.3,1.3,0.,1.57,0.])
 goal1 = array([0.5,-0.3,1.1,0.,1.57,0.])
 goal3 = array([0.5,-0.1,1.1,0.,1.57,0.])
-
+"""
 goal = array([goal1,goal2,goal3,goal4])
 
 """
@@ -181,6 +182,11 @@ taskRH.feature.frame('desired')
 taskLH=MetaTaskKine6d('lh',dyn,'lh','left-wrist')
 taskLH.opmodif = matrixToTuple(handMgrip)
 taskLH.feature.frame('desired')
+# RELATIVE POSITION TASK
+taskRel = MetaTaskKine6dRel('taskRel',dyn,'rh','lh','right-wrist','left-wrist')
+taskRel.opmodif = matrixToTuple(handMgrip)
+taskRel.opmodifBase = matrixToTuple(handMgrip)
+taskRel.feature.frame('desired')
 
 # --- POSTURE ---
 taskPosture = MetaTaskKinePosture(dyn)
@@ -301,24 +307,13 @@ COM_REF[2] = 0.
 taskCom.ref=vectorToTuple(COM_REF)
 taskCom.feature.selec.value= '111011' # z not controlled --> the robot can go up and down
 
-# Set relative feature for the left hand
-taskRH.feature.position.recompute(robot.control.time)
-taskLH.feature.position.recompute(robot.control.time)
-print str(taskLH.feature.position)
-#dyn.signal('rh').recompute(robot.control.time)
-#dyn.signal('lh').recompute(robot.control.time)
-#fRel = FeaturePositionRelative("featureRellh", dyn.signal('rh'), dyn.signal('lh'), dyn.signal('rh').value, dot(array(dyn.signal('rh').value),TwoHandSupportToTriggerMatrix), dyn.signal('Jrh'), dyn.signal('Jlh'))
-fRel = FeaturePositionRelative("featureRellh", taskRH.feature.position, taskLH.feature.position, taskRH.feature.position.value, taskLH.feature.position.value, taskRH.feature.jacobian, taskLH.feature.jacobian)
-taskLH.featureDes=fRel
-taskLH.task.clear()
-taskLH.task.add(fRel.name)
-
-# Static task options
-taskRH.feature.selec.value = '111111'	# RX no more free with the tool
-taskRH.gain.setByPoint(10,0.1,0.01,0.9)
-taskLH.feature.selec.value = '110111'	# RX free
-taskLH.gain.setByPoint(10,0.1,0.01,0.9)
-
+# Set relative feature between the hands
+taskRH.feature.position.recompute(0)
+taskLH.feature.position.recompute(0)
+taskRel.featureDes.position.value = taskRH.feature.position.value
+taskRel.featureDes.positionRef.value = taskLH.feature.position.value
+taskRel.feature.selec.value = '110111'	# RX free
+taskRel.gain.setByPoint(50,0.5,0.01,0.9)
 
 #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
 taskRH.feature.position.recompute(0)
@@ -330,7 +325,7 @@ RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 # TASK SCREW creation
 taskScrew=MetaTaskKine6d('rh',dyn,'rh','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
 taskScrew.feature.selec.value = '011111'
-taskScrew.gain.setByPoint(10,0.1,0.01,0.9)
+taskScrew.gain.setByPoint(20,0.2,0.01,0.9)
 
 # dumping
 sot.damping.value = 0.1
@@ -344,11 +339,10 @@ pos_out = open("/tmp/data.pos","w")
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
+push(taskRel)
 push(taskCom)
-#push(taskLH)
 push(taskScrew)
 push(taskWaist)
-
 
 
 def do():
@@ -375,7 +369,6 @@ def go_to(goal,pos_err_des,screw_len):
 
 	for i in range(3):
 
-		
 		# Goal display
 		robot.viewer.updateElementConfig('zmp',vectorToTuple(action[i])+(0.,0.,0.))
 		
@@ -385,9 +378,6 @@ def go_to(goal,pos_err_des,screw_len):
 		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > pos_err_des:
 			do()
 
-
-
-a = raw_input("ss")
 for i in range(4):
 	go_to(goal[i],pos_err_des,screw_len)
 
