@@ -1,48 +1,46 @@
 # ______________________________________________________________________________
 # ******************************************************************************
-# FIRST EXAMPLE OF REAL USAGE OF THE TOOL.
-# Given a stack of aims (holes with specified z-orientation) the robot put the
-# screw driver in front of the hole and executes the screwing operation. To 
-# complete the goal changing
+#
+#    BASIC EXAMPLE OF THE DYNAMIC SOT
+#       Robot: HRP-2 N.14
+#       Tasks: Rotate the head and move the arms
+# 
 # ______________________________________________________________________________
-# ******************************************************************************
+# ******************************************************************************  
 
-from dynamic_graph import plug
 from dynamic_graph.sot.core import *
-from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
-#import dynamic_graph.script_shortcuts
-#from dynamic_graph.script_shortcuts import optionalparentheses
-#from dynamic_graph.matlab import matlab
-from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
-from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
-from dynamic_graph.sot.core.meta_tasks import setGain
-from dynamic_graph.sot.core.meta_tasks_kine import *
-from dynamic_graph.sot.core.meta_tasks_kine_relative import MetaTaskKine6dRel
-from dynamic_graph.sot.core.meta_task_posture import MetaTaskKinePosture
-from dynamic_graph.sot.core.meta_task_visual_point import MetaTaskVisualPoint
+from dynamic_graph.script_shortcuts import optionalparentheses
+from dynamic_graph import plug
+
+from dynamic_graph.sot.core.matrix_util import *
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
-from dynamic_graph.sot.core.utils.attime import attime,ALWAYS,refset,sigset
-from numpy import *
+from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
+from dynamic_graph.sot.core.utils.attime import attime
 
-from dynamic_graph.sot.core.utils.history import History
-
-from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
+from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
+from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
+from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
+from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, gotoNdRel, goto6dRel
 
 from dynamic_graph.sot.fmorsill.utility import *
 from dynamic_graph.sot.fmorsill.rob_view_lib import *
 
-# --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
-# --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
-# --- ROBOT AND SCREWTOOL SIMU ---------------------------------------------------------------
+from numpy import *
+
+
+# ------------------------------------------------------------------------------
+# --- ROBOT DYNAMIC SIMULATION -------------------------------------------------
+# ------------------------------------------------------------------------------
 
 robotName = 'hrp14small'
-robotDim=robotDimension[robotName]
-robot = RobotSimu("robot")
+robotDim   = robotDimension[robotName]
+RobotClass = RobotDynSimu
+robot      = RobotClass("robot")
 robot.resize(robotDim)
-dt=5e-3
 
+dt=5e-3
 
 # Robot and TwoHandTool in the origin
 xr=0.
@@ -62,7 +60,6 @@ yawTool = pi/2
 
 # Initial configuration
 # We give the absolute position of the robot and then extract the relative rototranslation to impose to the tool
-from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
 x0=0#-1.6
 y0=0.#1.8
 z0=0.64870185118253043
@@ -70,67 +67,33 @@ roll0=0.
 pitch0=0.
 yaw0=0.#pi/2
 
-"""
-halfSittingConfig[robotName] = (x0,y0,z0,0,0,yaw0)+halfSittingConfig[robotName][6:]
-initialConfig[robotName]=halfSittingConfig[robotName]
-robot.set( initialConfig[robotName] )
-"""
-
-"""
-# Wall initial configuration
-robot.set()"""
-
 # Center initial configuration
-pose = (0.00890154,0.0486058,0.683817,-2.99066e-20,4.01579e-20,-0.0248718,0.0248718,-0.0835992,-0.2366,0.46607,-0.22947,0.0835992,0.0248718,-0.0839582,-0.27058,0.544286,-0.273706,0.0839582,-0.110689,-0.0869153,-1.09935e-17,-5.52732e-19,-0.225138,-0.628069,0.730439,-1.61574,1.54156,0.443013,0.174533,-0.239188,-0.164848,-0.741815,-1.01466,-0.538398,0.504463,0.174533)
-#write_xml(pose)
-#write_pos_py(pose[6:36])
-
-#for hrp14
+pose = (-0.030073618647834879, 0.016415887002202933, 0.62245944857810387, -5.4272918219751486e-20, 2.2304361400809676e-20, 0.0092340515812077348, -0.0092340515812077365, -0.031684365127837365, -0.5963821161312286, 1.0426697092875947, -0.44628759315636635, 0.031684365127837365, -0.0092340515812077348, -0.03174248663241639, -0.60591626591827519, 1.0568307464403983, -0.45091448052212324, 0.03174248663241639, -0.011123297511703737, -0.087265999999999927, -0.00033750538179865144, -0.0005624238088200199, -0.30213952018426748, -0.71906866277071557, 0.70978391033338306, -1.7041087671646877, 1.5030587263678217, 0.48707940835840557, 0.17569313715492132, -0.38348731360690541, -0.17453299999999988, -0.80343898121984014, -1.041280119185096, -0.51958844641260804, 0.54990959413946805, 0.17519281104793244)
+#write_xml("/opt/grx3.0/HRP2LAAS/project/",pose)
+write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",pose[6:36])
 robot.set(pose)
 
 # Screw Lenght
-screw_len = 0.
+screw_len = 0.03
 
 # TwoHandTool RotoTranslation / Homogeneous Matrix of the TwoHandTool. Normally given from the camera
-RTMatrix = eye(4); RTMatrix[0:3,0:3] = calcRotFromRPY(roll0-rollr,pitch0-pitchr,yaw0-yawr)
-RTMatrix[0:3,3] = (x0-xr,y0-yr,z0-zr)
-TwoHandToolPos = dot(RTMatrix,array([xTool,yTool,zTool,1]))	# HOMOGENEOUS POSITION!! CUT OFF THE 1 TO USE IT :-)
-TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool))
+RTMatrix = array(RPYToMatrix((x0-xr,y0-yr,z0-zr,roll0-rollr,pitch0-pitchr,yaw0-yawr)))
+refToTwoHandToolMatrix = dot( RTMatrix , array(RPYToMatrix((xTool,yTool,zTool,rollTool,pitchTool,yawTool))) )
 
 
-#goals with no dumping
-"""
-goal4 = array([0.5,-0.2,1.15,0.,1.57,0.])
-goal3 = array([0.7,-0.3,1.3,0.,1.57,0.])
-goal1 = array([0.6,-0.5,1.,0.,1.57,0.])
-goal2 = array([0.5,-0.2,1.,0.,1.57,0.])
-"""
-goal4 = array([0.55,-0.2,1.15,0.,1.57,0.])
-goal3 = array([0.55,-0.3,1.15,0.,1.57,0.])
+#goals
+goal3 = array([0.55,-0.2,0.9,0.,1.57,0.])
+goal4 = array([0.55,-0.3,0.9,0.,1.57,0.])
 goal1 = array([0.55,-0.3,1.,0.,1.57,0.])
 goal2 = array([0.55,-0.2,1.,0.,1.57,0.])
-"""
-# goals with dumping
-goal2 = array([0.5,-0.1,1.3,0.,1.57,0.])
-goal4 = array([0.5,-0.3,1.3,0.,1.57,0.])
-goal1 = array([0.5,-0.3,1.1,0.,1.57,0.])
-goal3 = array([0.5,-0.1,1.1,0.,1.57,0.])
-"""
+
 goal = array([goal1,goal2,goal3,goal4])
-
-"""
-goal1 = (-1.5,2.4,1.3,-1.57,0.,0.)
-goal2 = (-1.7,2.4,1.3,-1.57,0.,0.)
-goal3 = (-1.7,2.4,1.1,-1.57,0.,0.)
-goal4 = (-1.5,2.4,1.1,-1.57,0.,0.)
-"""
-
 
 
 # visualization
 addRobotViewer(robot,small=True,verbose=True)
-robot.viewer.updateElementConfig('fov',[0,0,-10,3.14,0,0])
-robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple(TwoHandToolPos[0:3])+vectorToTuple(extractRPYFromRot(TwoHandToolRot)))
+robot.viewer.updateElementConfig('TwoHandTool',vectorToTuple( array(matrixToRPY(refToTwoHandToolMatrix)) ))
+robot.viewer.updateElementConfig('zmp',vectorToTuple(array(matrixToRPY( dot(refToTwoHandToolMatrix,TwoHandToolToScrewMatrix) ))))
 for i in range(4):
 	robot.viewer.updateElementConfig('goal'+str(i+1),vectorToTuple(goal[i]))
 
@@ -139,23 +102,20 @@ for i in range(4):
 #---- DYN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-# Create the entity that computes the direct geometrics, kinematics and
-# dynamics model functions.
-
-modelDir  = pkgDataRootDir[robotName]
-xmlDir    = pkgDataRootDir[robotName]
+modelDir          = pkgDataRootDir[robotName]
+xmlDir            = pkgDataRootDir[robotName]
 specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
 jointRankPath     = xmlDir + '/HRP2LinkJointRankSmall.xml'
 
 dyn = Dynamic("dyn")
-dyn.setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
+dyn.setFiles(modelDir,modelName[robotName],specificitiesPath,jointRankPath)
 dyn.parse()
 
 dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
-dyn.velocity.value = robotDim*(0.,)
+plug(robot.velocity,dyn.velocity)
 dyn.acceleration.value = robotDim*(0.,)
 
 dyn.ffposition.unplug()
@@ -167,191 +127,231 @@ dyn.setProperty('ComputeAccelerationCoM','true')
 
 robot.control.unplug()
 
-# ---- SOT ---------------------------------------------------------------------
-# ---- SOT ---------------------------------------------------------------------
-# ---- SOT ---------------------------------------------------------------------
 
-# Create the inverse kinematics solver.
-# The solver SOTH of dyninv is used, but the SOT solver should be sufficient.
-sot = SolverKine('sot')
-sot.setSize(robotDim)
-plug(sot.control,robot.control)
+#-----------------------------------------------------------------------------
+# --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
+#-----------------------------------------------------------------------------
 
+taskWaist = MetaTaskDyn6d('taskWaist', dyn, 'waist', 'waist')
+taskChest = MetaTaskDyn6d('taskChest', dyn, 'chest', 'chest')
+taskHead  = MetaTaskDyn6d('taskHead', dyn, 'head', 'gaze')
+taskRH    = MetaTaskDyn6d('rh', dyn, 'rh', 'right-wrist')
+taskLH    = MetaTaskDyn6d('lh', dyn, 'lh', 'left-wrist')
+taskRel = MetaTaskDyn6dRel('rel',dyn,'rh','lh','right-wrist','left-wrist')
 
-# ---- TASKS -------------------------------------------------------------------
-# ---- TASKS -------------------------------------------------------------------
-# ---- TASKS -------------------------------------------------------------------
+for task in [taskHead, taskRH, taskLH, taskRel, taskWaist, taskChest]:
+    task.feature.frame('current')
+    task.task.dt.value = dt
+    task.featureDes.velocity.value=(0,0,0,0,0,0)
 
-# ---- TASK HANDS PLACEMENT
-# RIGHT HAND
-taskRH=MetaTaskKine6d('rh',dyn,'rh','right-wrist')
-handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.17)
+handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.14)
 taskRH.opmodif = matrixToTuple(handMgrip)
-taskRH.feature.frame('desired')
-# LEFT HAND
-taskLH=MetaTaskKine6d('lh',dyn,'lh','left-wrist')
 taskLH.opmodif = matrixToTuple(handMgrip)
-taskLH.feature.frame('desired')
+
 # RELATIVE POSITION TASK
-taskRel = MetaTaskKine6dRel('taskRel',dyn,'rh','lh','right-wrist','left-wrist')
 taskRel.opmodif = matrixToTuple(handMgrip)
 taskRel.opmodifBase = matrixToTuple(handMgrip)
-taskRel.feature.frame('desired')
 
-# --- POSTURE ---
-taskPosture = MetaTaskKinePosture(dyn)
+# CoM Task
+taskCom = MetaTaskDynCom(dyn,dt)
 
-# --- GAZE ---
-taskGaze = MetaTaskVisualPoint('gaze',dyn,'head','gaze')
-# Head to camera matrix transform
-headMcam=array([[0.0,0.0,1.0,0.081],[1.,0.0,0.0,0.072],[0.0,1.,0.0,0.031],[0.0,0.0,0.0,1.0]])
-headMcam = dot(headMcam,rotate('x',10*pi/180))
-taskGaze.opmodif = matrixToTuple(headMcam)
+# Posture Task
+taskPosture = MetaTaskDynPosture(dyn,dt)
 
-# --- JOINT LIMITS
+
+# Angular position and velocity limits
+taskLim = TaskDynLimits('taskLim')
+plug(dyn.position,taskLim.position)
+plug(dyn.velocity,taskLim.velocity)
+taskLim.dt.value = dt
+
 dyn.upperJl.recompute(0)
 dyn.lowerJl.recompute(0)
-taskJL = TaskJointLimits('taskJL')
-plug(dyn.position,taskJL.position)
-taskJL.controlGain.value = 10
-taskJL.referenceInf.value = dyn.lowerJl.value
-taskJL.referenceSup.value = dyn.upperJl.value
-taskJL.dt.value = dt
-taskJL.selec.value = toFlags(range(6,22)+range(22,28)+range(29,35))
+taskLim.referencePosInf.value = dyn.lowerJl.value
+taskLim.referencePosSup.value = dyn.upperJl.value
 
-# --- CONTACTS
-contactLF = MetaTaskKine6d('contactLF',dyn,'LF','left-ankle')
+taskLim.controlGain.value = 1
+
+#dqup = (0, 0, 0, 0, 0, 0, 200, 220, 250, 230, 290, 520, 200, 220, 250, 230, 290, 520, 250, 140, 390, 390, 240, 140, 240, 130, 270, 180, 330, 240, 140, 240, 130, 270, 180, 330)
+dqup = (1000,)*robotDim
+taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
+taskLim.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
+
+###
+featureHeight = FeatureGeneric('featureHeight')
+plug(dyn.com,featureHeight.errorIN)
+plug(dyn.Jcom,featureHeight.jacobianIN)
+
+
+
+#-----------------------------------------------------------------------------
+# --- Stack of tasks controller  ---------------------------------------------
+#-----------------------------------------------------------------------------
+
+sot = SolverKine('sot')
+
+sot.setSize(robotDim)
+
+plug(sot.control, robot.control)
+plug(sot.control, robot.acceleration)
+
+
+#-----------------------------------------------------------------------------
+# ---- CONTACT: Contact definition -------------------------------------------
+#-----------------------------------------------------------------------------
+
+# Left foot contact
+contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
+contactLF.featureDes.velocity.value=(0,0,0,0,0,0)
 contactLF.feature.frame('desired')
-contactLF.gain.setConstant(10)
-contactRF = MetaTaskKine6d('contactRF',dyn,'RF','right-ankle')
+contactLF.name = "LF"
+
+# Right foot contact
+contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
+contactRF.featureDes.velocity.value=(0,0,0,0,0,0)
 contactRF.feature.frame('desired')
-contactRF.gain.setConstant(10)
+contactRF.name = "RF"
 
-# --- TASK SUPPORT SMALL --------------------------------------------
-featureSupportSmall = FeatureGeneric('featureSupportSmall')
-plug(dyn.com,featureSupportSmall.errorIN)
-plug(dyn.Jcom,featureSupportSmall.jacobianIN)
+contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 
-taskSupportSmall=TaskInequality('taskSupportSmall')
-taskSupportSmall.add(featureSupportSmall.name)
-taskSupportSmall.selec.value = '011'
-taskSupportSmall.dt.value=dt
-
-# ---- WAIST TASK ---
-taskWaist=MetaTask6d('waist',dyn,'waist','waist')
-gotoNd(taskWaist,(0.,0.,0.),'011000',(10,0.9,0.01,0.9))	# inside the function rot=0 --> we set a random position not to control it
-
-# --- TASK COM (if not walking)
-taskCom = MetaTaskKineCom(dyn)
-
-# --- OTHER CONFIGS ----------------------------------------------------------
-# --- OTHER CONFIGS ----------------------------------------------------------
-# --- OTHER CONFIGS ----------------------------------------------------------
+# Imposed erordot = 0
+contactLF.feature.errordot.value=(0,0,0,0,0,0)
+contactRF.feature.errordot.value=(0,0,0,0,0,0)
 
 
-# --- TRACER -----------------------------------------------------------------
-# Record some signals in the /tmp directory. Use the octave script p.m to plot
-# them.
-# p('com',1:2)   % Plot the X and Y components of the COM file (dyn.com signal).
+
+#-----------------------------------------------------------------------------
+# --- TRACER ------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
-tr.open('/tmp/','','.dat')
-tr.start()
+tr.open('/tmp/','dyn_','.dat')
+
 robot.after.addSignal('tr.triger')
+robot.after.addSignal('dyn.com')
+robot.after.addSignal('taskLim.normalizedPosition')
 
-tr.add('dyn.com','com')
-tr.add(taskJL.name+".normalizedPosition","qn")
-robot.after.addSignal(taskJL.name+".normalizedPosition")
-tr.add(taskRH.task.name+'.error','erh')
+"""
+# ------------------------------------------------------------------------------
+# --- MAIN LOOP ----------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-# --- SHORTCUTS ----------------------------------------------------------------
-def push(task):
-    '''Add a task at the least priority of the stack.'''
-    if isinstance(task,str): taskName=task
-    elif "task" in task.__dict__:  taskName=task.task.name
-    else: taskName=task.name
-    if taskName not in sot.toList():
-        sot.push(taskName)
-        if taskName!="taskposture" and "taskposture" in sot.toList():
-            sot.down("taskposture")
+def inc():
+	robot.increment(dt)
+	attime.run(robot.control.time)
+	updateComDisplay(robot,dyn.com)
+	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
+    # verif.record()
 
-def pop(task):
-    '''Remove the least-priority task from the stack.'''
-    if isinstance(task,str): taskName=task
-    elif "task" in task.__dict__:  taskName=task.task.name
-    else: taskName=task.name
-    if taskName in sot.toList(): sot.rm(taskName)
+@loopInThread
+def loop():
+    inc()
+runner=loop()
 
-def toList(sot):
-    '''Display the stack as a list of task names.'''
-    return map(lambda x: x[1:-1],sot.dispStack().split('|')[1:])
-SolverKine.toList = toList
 
-# --- RUN ----------------------------------------------------------------------
-# --- RUN ----------------------------------------------------------------------
-# --- RUN ----------------------------------------------------------------------
+# --- shortcuts -------------------------------------------------
+@optionalparentheses
+def go(): runner.play()
+@optionalparentheses
+def stop(): runner.pause()
+@optionalparentheses
+def next(): inc()
+@optionalparentheses
+def iter():         print 'iter = ',robot.state.time
+@optionalparentheses
+def status():       print runner.isPlay
+"""
 
-updateComDisplay(robot,dyn.com)
 
-# Foot position recomputing
-dyn.LF.recompute(0)
-LFMatH = array(dyn.LF.value)
-LFx = LFMatH[0][3]
-LFy = LFMatH[1][3]
-#LFz = 0.105
-dyn.RF.recompute(0)
-RFMatH = array(dyn.RF.value)
-RFx = RFMatH[0][3]
-RFy = RFMatH[1][3]
-#RFz = 0.105
 
-center = array([(LFx+RFx)/2,(LFy+RFy)/2,0.])	# z not important
+#-----------------------------------------------------------------------------
+# --- RUN --------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
-# Set the aims
-contactLF.ref = matrixToTuple(LFMatH)
-contactRF.ref = matrixToTuple(RFMatH)
+# Task references
 dyn.com.recompute(0)
-COM_REF = array(dyn.com.value)
-taskCom.ref=vectorToTuple(COM_REF)
-taskCom.feature.selec.value= '111011' # z not controlled --> the robot can go up and down
+taskCom.featureDes.errorIN.value = dyn.com.value
+taskCom.task.controlGain.value = 10
 
-# Set relative feature between the hands
-taskRH.feature.position.recompute(0)
-taskLH.feature.position.recompute(0)
-taskRel.featureDes.position.value = taskRH.feature.position.value
-taskRel.featureDes.positionRef.value = taskLH.feature.position.value
-taskRel.feature.selec.value = '110111'	# RX free
-taskRel.gain.setByPoint(50,0.5,0.01,0.9)
+taskPosture.ref = halfSittingConfig[robotName]
+#taskPosture.ref = pose
+
+taskCom.feature.selec.value = '011'
+taskCom.gain.setConstant(0.1)
 
 #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
-refToTwoHandToolMatrix = eye(4); refToTwoHandToolMatrix[0:3,0:3] = TwoHandToolRot; refToTwoHandToolMatrix[0:3,3] = TwoHandToolPos[0:3]
+taskRH.feature.position.recompute(0)
+taskLH.feature.position.recompute(0)
 RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
-#!!!!!! RH and Support are different references, because the X rotation is not controlled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#!!!!!! RH and Height are different references, because the X rotation is not controlled in positioning!!!!!!!!!!!!!!!!!!!!!!!!!!
 RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
 # TASK SCREW creation
-taskScrew=MetaTaskKine6d('rh',dyn,'rh','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
+taskScrew=MetaTaskDyn6d('screw',dyn,'screw','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
+taskScrew.featureDes.velocity.value=(0,0,0,0,0,0)
 taskScrew.feature.selec.value = '011111'
-taskScrew.gain.setByPoint(20,0.2,0.01,0.9)
+taskScrew.gain.setByPoint(100,5,0.01,0.9)
 
-# dumping
-sot.damping.value = 0.1
+#gotoNd(taskScrew, goal1, "011111",(100,5,0.01,0.9))
+
+gotoNdRel(taskRel,array(taskRH.feature.position.value),array(taskLH.feature.position.value),'110111',1000)
+taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
+
+###################################################################################################################
+
+
+gotoNd(taskChest,(0.,0.,0.,0.,0.1,0.),'110000')	# inside the function rot=0 --> we set a random position not to control it
+taskChest.gain.setConstant(1)
+
+gotoNd(taskWaist,(0.,0.,0.,0.,0.,0.),'110000')	# inside the function rot=0 --> we set a random position not to control it
+taskWaist.gain.setConstant(1)
+
+
+"""
+dyn.createOpPoint('waist','waist')
+featureWaist    = FeaturePoint6d('featureWaist')
+plug(dyn.waist,featureWaist.position)
+plug(dyn.Jwaist,featureWaist.Jq)
+taskWaist=TaskInequality('taskWaist')
+taskWaist.add(featureWaist.name)
+taskWaist.selec.value = '010000'
+taskWaist.referenceInf.value = (0.,-0.1,0,0,0,0)    # Xmin, Ymin
+taskWaist.referenceSup.value = (0.,0.5,0,0,0,0)  # Xmax, Ymax
+taskWaist.dt.value=dt
+
+
+dyn.createOpPoint('chest','chest')
+featureChest    = FeaturePoint6d('featureChest')
+plug(dyn.chest,featureChest.position)
+plug(dyn.Jchest,featureChest.Jq)
+taskChest=TaskInequality('taskChest')
+taskChest.add(featureChest.name)
+taskChest.selec.value = '010000'
+taskChest.referenceInf.value = (0.,-0.5,0,0,0,0)    # Xmin, Ymin
+taskChest.referenceSup.value = (0.,0.,0,0,0,0)  # Xmax, Ymax
+taskChest.dt.value=dt
+"""
+
+###################################################################################################################
+
+# Sot
+sot.clear()
+sot.addContact(contactLF)
+sot.addContact(contactRF)
+sot.push(taskLim.name)
+sot.push(taskRel.task.name)
+sot.push(taskScrew.task.name)
+sot.push(taskCom.task.name)
+sot.push(taskWaist.task.name)
+sot.push(taskChest.task.name)
+sot.push(taskPosture.task.name)
 
 # Motion recording
 zmp_out = open("/tmp/data.zmp","w")
 hip_out = open("/tmp/data.hip","w")
 pos_out = open("/tmp/data.pos","w")
-
-# Set up the stack solver.
-sot.addContact(contactLF)
-sot.addContact(contactRF)
-#push(taskJL)
-push(taskRel)
-push(taskCom)
-push(taskScrew)
-push(taskWaist)
-
 
 def do():
 	robot.increment(dt)
@@ -376,18 +376,16 @@ def go_to(goal,pos_err_des,screw_len):
 	for i in range(3):
 
 		# Goal display
-		robot.viewer.updateElementConfig('zmp',vectorToTuple(action[i])+(0.,0.,0.))
+		robot.viewer.updateElementConfig('zmp',vectorToTuple(action[i][0:3,3])+(0.,0.,0.))
 		
 		# Aim setting
 		taskScrew.ref = matrixToTuple(action[i])
 		do()
-		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > pos_err_des:
+		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > pos_err_des: #for j in range(1): #
 			do()
 
 for i in range(4):
 	go_to(goal[i],pos_err_des,screw_len)
 
-
-print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
 
 
