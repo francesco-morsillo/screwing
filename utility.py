@@ -76,7 +76,7 @@ TwoHandToolToTriggerMatrix[0:3,3] = (0.25,0.,0.)
 TwoHandToolToSupportMatrix=eye(4); TwoHandToolToSupportMatrix[0:3,3] = (-0.03,0.,0.)
 
 # From the reference to the screwing part (rotation on z)
-TwoHandToolToScrewMatrix=array([[1.,0.,0.,-0.11],[0.,0.,-1.,-0.03],[0.,1.,0.,0.],[0.,0.,0.,1.]])
+TwoHandToolToScrewMatrix=array([[1.,0.,0.,-0.115],[0.,0.,-1.,-0.03],[0.,1.,0.,0.],[0.,0.,0.,1.]])
 
 # From the screw to the support
 TwoHandScrewToSupportMatrix=dot(linalg.inv(TwoHandToolToScrewMatrix),TwoHandToolToSupportMatrix)
@@ -109,7 +109,111 @@ OneHandScrewToTriggerMatrix=dot(linalg.inv(OneHandToolToScrewMatrix),OneHandTool
 ### Demanded errors -------------------------------------------------------------------
 
 # Position Error
-pos_err_des = 0.000001
+pos_err_des = 0.0001
+
+
+
+### SCRIPT UTILITIES
+
+def write_xml(src_rep,pos36):	#dyn.position.value
+	
+	f1 = open(src_rep+"HRP2LAASPart1.xml","r")
+	f3 = open(src_rep+"HRP2LAASPart3.xml","r")
+
+	part1 = f1.read()
+	part3 = f3.read()
+
+	part2 = ''
+	part2=part2+'            <property name="WAIST.translation" value="'+str(pos36[0])+' '+str(pos36[1])+' '+str(pos36[2])+' "/>\n'
+	AA = extractAAFromRot(calcRotFromRPY(pos36[3],pos36[4],pos36[5]))
+	part2=part2+'            <property name="WAIST.rotation" value="'+str(AA[0])+' '+str(AA[1])+' '+str(AA[2])+' '+str(AA[3])+' "/>\n'
+	part2=part2+'            <property name="WAIST.angle" value="0.0"/>\n'
+	part2=part2+'            <property name="RLEG_JOINT0.angle" value="'+str(pos36[6])+'"/>\n'
+	part2=part2+'            <property name="RLEG_JOINT1.angle" value="'+str(pos36[7])+'"/>\n'
+	part2=part2+'            <property name="RLEG_JOINT2.angle" value="'+str(pos36[8])+'"/>\n'
+	part2=part2+'            <property name="RLEG_JOINT3.angle" value="'+str(pos36[9])+'"/>\n'
+	part2=part2+'            <property name="RLEG_JOINT4.angle" value="'+str(pos36[10])+'"/>\n'
+	part2=part2+'            <property name="RLEG_JOINT5.angle" value="'+str(pos36[11])+'"/>\n'
+	part2=part2+'            <property name="LLEG_JOINT0.angle" value="'+str(pos36[12])+'"/>\n'
+	part2=part2+'            <property name="LLEG_JOINT1.angle" value="'+str(pos36[13])+'"/>\n'
+	part2=part2+'            <property name="LLEG_JOINT2.angle" value="'+str(pos36[14])+'"/>\n'
+	part2=part2+'            <property name="LLEG_JOINT3.angle" value="'+str(pos36[15])+'"/>\n'
+	part2=part2+'            <property name="LLEG_JOINT4.angle" value="'+str(pos36[16])+'"/>\n'
+	part2=part2+'            <property name="LLEG_JOINT5.angle" value="'+str(pos36[17])+'"/>\n'
+	part2=part2+'            <property name="CHEST_JOINT0.angle" value="'+str(pos36[18])+'"/>\n'
+	part2=part2+'            <property name="CHEST_JOINT1.angle" value="'+str(pos36[19])+'"/>\n'
+	part2=part2+'            <property name="HEAD_JOINT0.angle" value="'+str(pos36[20])+'"/>\n'
+	part2=part2+'            <property name="HEAD_JOINT1.angle" value="'+str(pos36[21])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT0.angle" value="'+str(pos36[22])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT1.angle" value="'+str(pos36[23])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT2.angle" value="'+str(pos36[24])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT3.angle" value="'+str(pos36[25])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT4.angle" value="'+str(pos36[26])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT5.angle" value="'+str(pos36[27])+'"/>\n'
+	part2=part2+'            <property name="RARM_JOINT6.angle" value="'+str(pos36[28])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT0.angle" value="'+str(pos36[29])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT1.angle" value="'+str(pos36[30])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT2.angle" value="'+str(pos36[31])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT3.angle" value="'+str(pos36[32])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT4.angle" value="'+str(pos36[33])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT5.angle" value="'+str(pos36[34])+'"/>\n'
+	part2=part2+'            <property name="LARM_JOINT6.angle" value="'+str(pos36[35])+'"/>\n'
+
+
+	out = open(src_rep+"HRP2LAASTry.xml","w")
+
+	out.write(part1)
+	out.write(part2)
+	out.write(part3)
+
+	out.close()
+
+def write_pos_py(src_rep,pos30): #no free-floating
+
+	pos30 = 180/3.14*array(pos30)
+
+	f1 = open(src_rep+"airbus_screwing_part1.py","r")
+	f3 = open(src_rep+"airbus_screwing_part3.py","r")
+
+	part1 = f1.read()
+	part3 = f3.read()
+
+	part2 = ''
+	part2=part2+'CF_init_pose.rleg = "'+str(pos30[0])+' '+str(pos30[1])+' '+str(pos30[2])+' '+str(pos30[3])+' '+str(pos30[4])+' '+str(pos30[5])+'"\n'
+	part2=part2+'CF_init_pose.lleg = "'+str(pos30[6])+' '+str(pos30[7])+' '+str(pos30[8])+' '+str(pos30[9])+' '+str(pos30[10])+' '+str(pos30[11])+'"\n'
+	part2=part2+'CF_init_pose.chest = "'+str(pos30[12])+' '+str(pos30[13])+'"\n'
+	part2=part2+'CF_init_pose.head = "'+str(pos30[14])+' '+str(pos30[15])+'"\n'
+	part2=part2+'CF_init_pose.rarm = "'+str(pos30[16])+' '+str(pos30[17])+' '+str(pos30[18])+' '+str(pos30[19])+' '+str(pos30[20])+' '+str(pos30[21])+' '+str(pos30[22])+'"\n'
+	part2=part2+'CF_init_pose.larm = "'+str(pos30[23])+' '+str(pos30[24])+' '+str(pos30[25])+' '+str(pos30[26])+' '+str(pos30[27])+' '+str(pos30[28])+' '+str(pos30[29])+'"\n'
+
+	out = open(src_rep+"airbus_screwing_series_2.py","w")
+
+	out.write(part1)
+	out.write(part2)
+	out.write(part3)
+
+	out.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

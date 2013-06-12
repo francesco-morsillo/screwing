@@ -54,7 +54,7 @@ yawr=0.
 
 xTool = 0.4
 yTool = -0.2
-zTool = 1.1
+zTool = 1.
 rollTool = 0.
 pitchTool = pi/5
 yawTool = pi/2
@@ -81,8 +81,12 @@ robot.set( initialConfig[robotName] )
 robot.set()"""
 
 # Center initial configuration
+pose = (0.00890154,0.0486058,0.683817,-2.99066e-20,4.01579e-20,-0.0248718,0.0248718,-0.0835992,-0.2366,0.46607,-0.22947,0.0835992,0.0248718,-0.0839582,-0.27058,0.544286,-0.273706,0.0839582,-0.110689,-0.0869153,-1.09935e-17,-5.52732e-19,-0.225138,-0.628069,0.730439,-1.61574,1.54156,0.443013,0.174533,-0.239188,-0.164848,-0.741815,-1.01466,-0.538398,0.504463,0.174533)
+#write_xml(pose)
+#write_pos_py(pose[6:36])
+
 #for hrp14
-robot.set((-0.0351735,0.0170394,0.689482,6.95913e-24,6.62503e-23,0.0107048,-0.0107048,-0.0291253,-0.280304,0.410581,-0.130277,0.0291253,-0.0107048,-0.0291644,-0.298025,0.441124,-0.1431,0.0291644,0.0119509,-0.08704,-8.89686e-19,-4.55781e-20,-0.122966,-0.75002,0.497028,-1.85734,1.55327,0.410855,0.174533,-0.289009,-0.174232,-0.806603,-1.27773,-0.657843,0.683645,0.174533))
+robot.set(pose)
 
 # Screw Lenght
 screw_len = 0.
@@ -95,10 +99,16 @@ TwoHandToolRot = dot(RTMatrix[0:3,0:3],calcRotFromRPY(rollTool,pitchTool,yawTool
 
 
 #goals with no dumping
-goal4 = array([0.5,-0.2,1.3,0.,1.57,0.])
-goal3 = array([0.5,-0.3,1.3,0.,1.57,0.])
-goal1 = array([0.5,-0.3,1.2,0.,1.57,0.])
-goal2 = array([0.5,-0.2,1.2,0.,1.57,0.])
+"""
+goal4 = array([0.5,-0.2,1.15,0.,1.57,0.])
+goal3 = array([0.7,-0.3,1.3,0.,1.57,0.])
+goal1 = array([0.6,-0.5,1.,0.,1.57,0.])
+goal2 = array([0.5,-0.2,1.,0.,1.57,0.])
+"""
+goal4 = array([0.55,-0.2,1.15,0.,1.57,0.])
+goal3 = array([0.55,-0.3,1.15,0.,1.57,0.])
+goal1 = array([0.55,-0.3,1.,0.,1.57,0.])
+goal2 = array([0.55,-0.2,1.,0.,1.57,0.])
 """
 # goals with dumping
 goal2 = array([0.5,-0.1,1.3,0.,1.57,0.])
@@ -303,7 +313,6 @@ contactLF.ref = matrixToTuple(LFMatH)
 contactRF.ref = matrixToTuple(RFMatH)
 dyn.com.recompute(0)
 COM_REF = array(dyn.com.value)
-COM_REF[2] = 0.
 taskCom.ref=vectorToTuple(COM_REF)
 taskCom.feature.selec.value= '111011' # z not controlled --> the robot can go up and down
 
@@ -316,7 +325,6 @@ taskRel.feature.selec.value = '110111'	# RX free
 taskRel.gain.setByPoint(50,0.5,0.01,0.9)
 
 #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
-taskRH.feature.position.recompute(0)
 refToTwoHandToolMatrix = eye(4); refToTwoHandToolMatrix[0:3,0:3] = TwoHandToolRot; refToTwoHandToolMatrix[0:3,3] = TwoHandToolPos[0:3]
 RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 #!!!!!! RH and Support are different references, because the X rotation is not controlled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -338,7 +346,7 @@ pos_out = open("/tmp/data.pos","w")
 # Set up the stack solver.
 sot.addContact(contactLF)
 sot.addContact(contactRF)
-push(taskJL)
+#push(taskJL)
 push(taskRel)
 push(taskCom)
 push(taskScrew)
@@ -364,8 +372,6 @@ def go_to(goal,pos_err_des,screw_len):
 
 	# mini-task sequence definition
 	action = array([preparationMatrix,refToGoalMatrix,preparationMatrix])
-
-	robot.before.addSignal(taskRH.feature.name+".error")
 
 	for i in range(3):
 

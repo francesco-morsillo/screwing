@@ -28,7 +28,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,rob
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
 
-robotName = 'hrp10small'
+robotName = 'hrp14small'
 robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)
@@ -41,9 +41,9 @@ z0=0.64870185118253043  #0.6487018512
 halfSittingConfig[robotName] = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
 
 initialConfig[robotName]=halfSittingConfig[robotName]
-
+"""
 initialConfig[robotName]=(0.00049999999992054859, 0.00049999999999627166, 0.6350000000004179, -1.3576245230323505e-16, -1.2271661091679395e-14, -7.0755021448112835e-21, 1.1590588873416236e-17, -0.00094336656172265174, -0.48680748131139595, 0.97550163614052687, -0.48869415482911871, 0.00094336656172278759, 1.159528247642137e-17, -0.0009434253350073629, -0.48704216746084605, 0.97597124353230558, -0.48892907607144726, 0.00094342533500749864, 0.0, 0.0, 0.0, 0.0, 0.26179938779914941, -0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.0, 0.17453292519943295, 0.26179938779914941, 0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.0, 0.17453292519943295)
-
+"""
 
 robot.set( initialConfig[robotName] )
 addRobotViewer(robot,small=True,verbose=True)

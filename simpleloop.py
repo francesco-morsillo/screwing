@@ -34,7 +34,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,rob
 robotName = 'hrp14small'
 robotDim=robotDimension[robotName]
 
-"""
+
 robot = RobotSimu("robot")
 robot.resize(robotDim)
 dt=5e-3
@@ -49,7 +49,7 @@ q0=list(halfSittingConfig[robotName])
 initialConfig[robotName]=tuple(q0)
 
 robot.set( initialConfig[robotName] )
-"""
+
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------

@@ -52,11 +52,12 @@ y0=0.
 z0=0.64870185118253043
 halfSittingConfig[robotName] = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
 
-
+"""
 q0=list(halfSittingConfig[robotName])
 initialConfig[robotName]=tuple(q0)
+"""
 
-robot.set( initialConfig[robotName] )
+robot.set( halfSittingConfig[robotName] )
 
 """
 
@@ -64,9 +65,6 @@ robot.set( initialConfig[robotName] )
 robot.set((-0.0351735,0.0170394,0.689482,6.95913e-24,6.62503e-23,0.0107048,-0.0107048,-0.0291253,-0.280304,0.410581,-0.130277,0.0291253,-0.0107048,-0.0291644,-0.298025,0.441124,-0.1431,0.0291644,0.0119509,-0.08704,-8.89686e-19,-4.55781e-20,-0.122966,-0.75002,0.497028,-1.85734,1.55327,0.410855,0.174533,-0.289009,-0.174232,-0.806603,-1.27773,-0.657843,0.683645,0.174533))
 """
 
-""" #for hrp10
-robot.set((-0.0680573,0.0549703,0.681123,5.3467e-26,9.25815e-26,0.0607429,-0.0607429,-0.0950824,-0.333218,0.445825,-0.112607,0.0950824,-0.0607429,-0.0951705,-0.380667,0.5136,-0.132932,0.0951705,-0.196613,-0.0799953,-0.00461902,0.00508595,-0.598498,-0.0548141,0.908472,-1.45118,1.70262,0.420043,0.462092,0.174533,-0.551393,-0.169999,0.403413,-1.33973,1.85,1.66127,0.0234165,0.174533))
-"""
 addRobotViewer(robot,small=True,verbose=True)
 robot.viewer.updateElementConfig('fov',[0,0,-10,3.14,0,0])
 
@@ -119,7 +117,7 @@ plug(sot.control,robot.control)
 # TwoHandTool
 xd = 0.4
 yd = -0.2
-zd = 1.1
+zd = 1.
 roll = 0.
 pitch = pi/5
 yaw = pi/2
@@ -149,7 +147,7 @@ taskLH.feature.frame('desired')
 taskCom = MetaTaskKineCom(dyn)
 
 # --- POSTURE ---
-#taskPosture = MetaTaskKinePosture(dyn)
+taskPosture = MetaTaskKinePosture(dyn)
 
 # --- GAZE ---
 taskGaze = MetaTaskVisualPoint('gaze',dyn,'head','gaze')
@@ -265,6 +263,12 @@ target = dot(refToTwoHandToolMatrix,EdgeMatrix)
 robot.viewer.updateElementConfig('zmp',vectorToTuple(target[0:3,3])+(0,0,0))
 """
 
+dyn.com.recompute(0)
+taskCom.ref = dyn.com.value
+taskCom.feature.selec.value = '111'
+
+taskPosture.ref = halfSittingConfig[robotName]
+
 # Set the target for RH and LH task. Selec is the activation flag (say control only
 # the XYZ translation), and gain is the adaptive gain (10 at the target, 0.1
 # far from it, with slope st. at 0.01m from the target, 90% of the max gain
@@ -281,10 +285,11 @@ taskLH.gain.setByPoint(30,0.3,0.01,0.9)
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 push(taskJL)
-push(taskSupport)
+push(taskCom)
 push(taskWaist)
 push(taskRH)
 push(taskLH)
+push(taskPosture)
 
 taskRH.feature.error.recompute(robot.control.time)
 while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
@@ -293,8 +298,6 @@ while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 	updateComDisplay(robot,dyn.com)
 
 print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
-
-
 
 
 
