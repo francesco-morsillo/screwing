@@ -83,8 +83,8 @@ refToTwoHandToolMatrix = dot( RTMatrix , array(RPYToMatrix((xTool,yTool,zTool,ro
 
 
 #goals
-goal3 = array([0.55,-0.2,1.1,0.,1.57,0.])
-goal4 = array([0.55,-0.3,1.1,0.,1.57,0.])
+goal3 = array([0.55,-0.2,0.9,0.,1.57,0.])
+goal4 = array([0.55,-0.3,0.9,0.,1.57,0.])
 goal1 = array([0.55,-0.3,1.,0.,1.57,0.])
 goal2 = array([0.55,-0.2,1.,0.,1.57,0.])
 
