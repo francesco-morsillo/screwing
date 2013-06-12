@@ -291,8 +291,8 @@ RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 # TASK SCREW creation
 taskScrew=MetaTaskDyn6d('screw',dyn,'screw','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
 taskScrew.featureDes.velocity.value=(0,0,0,0,0,0)
-taskScrew.feature.selec = '011111'
-taskScrew.gain.setByPoint((100,5,0.01,0.9))
+taskScrew.feature.selec.value = '011111'
+taskScrew.gain.setByPoint(100,5,0.01,0.9)
 
 #gotoNd(taskScrew, goal1, "011111",(100,5,0.01,0.9))
 
