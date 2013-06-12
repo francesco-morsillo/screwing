@@ -186,7 +186,7 @@ def write_pos_py(src_rep,pos30): #no free-floating
 	part2=part2+'CF_init_pose.rarm = "'+str(pos30[16])+' '+str(pos30[17])+' '+str(pos30[18])+' '+str(pos30[19])+' '+str(pos30[20])+' '+str(pos30[21])+' '+str(pos30[22])+'"\n'
 	part2=part2+'CF_init_pose.larm = "'+str(pos30[23])+' '+str(pos30[24])+' '+str(pos30[25])+' '+str(pos30[26])+' '+str(pos30[27])+' '+str(pos30[28])+' '+str(pos30[29])+'"\n'
 
-	out = open(src_rep+"airbus_screwing_series_2.py","w")
+	out = open(src_rep+"airbus_screwing_new.py","w")
 
 	out.write(part1)
 	out.write(part2)

@@ -69,7 +69,7 @@ yaw0=0.#pi/2
 
 # Center initial configuration
 pose = (-0.030073618647834879, 0.016415887002202933, 0.62245944857810387, -5.4272918219751486e-20, 2.2304361400809676e-20, 0.0092340515812077348, -0.0092340515812077365, -0.031684365127837365, -0.5963821161312286, 1.0426697092875947, -0.44628759315636635, 0.031684365127837365, -0.0092340515812077348, -0.03174248663241639, -0.60591626591827519, 1.0568307464403983, -0.45091448052212324, 0.03174248663241639, -0.011123297511703737, -0.087265999999999927, -0.00033750538179865144, -0.0005624238088200199, -0.30213952018426748, -0.71906866277071557, 0.70978391033338306, -1.7041087671646877, 1.5030587263678217, 0.48707940835840557, 0.17569313715492132, -0.38348731360690541, -0.17453299999999988, -0.80343898121984014, -1.041280119185096, -0.51958844641260804, 0.54990959413946805, 0.17519281104793244)
-write_xml("/opt/grx3.0/HRP2LAAS/project/",pose)
+#write_xml("/opt/grx3.0/HRP2LAAS/project/",pose)
 write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",pose[6:36])
 robot.set(pose)
 
@@ -79,7 +79,6 @@ screw_len = 0.03
 # TwoHandTool RotoTranslation / Homogeneous Matrix of the TwoHandTool. Normally given from the camera
 RTMatrix = array(RPYToMatrix((x0-xr,y0-yr,z0-zr,roll0-rollr,pitch0-pitchr,yaw0-yawr)))
 refToTwoHandToolMatrix = dot( RTMatrix , array(RPYToMatrix((xTool,yTool,zTool,rollTool,pitchTool,yawTool))) )
-
 
 
 #goals
@@ -183,12 +182,7 @@ featureHeight = FeatureGeneric('featureHeight')
 plug(dyn.com,featureHeight.errorIN)
 plug(dyn.Jcom,featureHeight.jacobianIN)
 
-taskHeight=TaskInequality('taskHeight')
-taskHeight.add(featureHeight.name)
-taskHeight.selec.value = '100'
-taskHeight.referenceInf.value = (0.,0.,0.)    # Zmin
-taskHeight.referenceSup.value = (0.,0.,0.8554)  # Zmax
-taskHeight.dt.value=dt
+
 
 #-----------------------------------------------------------------------------
 # --- Stack of tasks controller  ---------------------------------------------
@@ -238,7 +232,7 @@ tr.open('/tmp/','dyn_','.dat')
 robot.after.addSignal('tr.triger')
 robot.after.addSignal('dyn.com')
 robot.after.addSignal('taskLim.normalizedPosition')
-robot.after.addSignal(taskHeight.name+".normalizedPosition")
+
 """
 # ------------------------------------------------------------------------------
 # --- MAIN LOOP ----------------------------------------------------------------
@@ -282,10 +276,9 @@ taskCom.featureDes.errorIN.value = dyn.com.value
 taskCom.task.controlGain.value = 10
 
 taskPosture.ref = halfSittingConfig[robotName]
-#taskPosture.ref = initialConfig[robotName]
 #taskPosture.ref = pose
 
-taskCom.feature.selec.value = '000011'
+taskCom.feature.selec.value = '011'
 taskCom.gain.setConstant(0.1)
 
 #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
@@ -298,7 +291,10 @@ RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 # TASK SCREW creation
 taskScrew=MetaTaskDyn6d('screw',dyn,'screw','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
 taskScrew.featureDes.velocity.value=(0,0,0,0,0,0)
-gotoNd(taskScrew, goal1, "011111",(100,5,0.01,0.9))
+taskScrew.feature.selec = '011111'
+taskScrew.gain.setByPoint((100,5,0.01,0.9))
+
+#gotoNd(taskScrew, goal1, "011111",(100,5,0.01,0.9))
 
 gotoNdRel(taskRel,array(taskRH.feature.position.value),array(taskLH.feature.position.value),'110111',1000)
 taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
