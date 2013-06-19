@@ -23,6 +23,8 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, r
 from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
 
+#from dynamic_graph.sot.core.utils.history import History
+
 from numpy import *
 
 
@@ -103,14 +105,14 @@ robot.control.unplug()
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
-taskrh = MetaTaskDyn6d('rh', dyn, 'rh', 'right-wrist')
+taskRH = MetaTaskDyn6d('rh', dyn, 'rh', 'right-wrist')
 
-taskrh.feature.frame('current')
-taskrh.gain.setByPoint(50,1,0.01,0.9)
-taskrh.task.dt.value = dt
-taskrh.featureDes.velocity.value=(0,0,0,0,0,0)
+taskRH.feature.frame('current')
+taskRH.gain.setByPoint(50,1,0.01,0.9)
+taskRH.task.dt.value = dt
+taskRH.featureDes.velocity.value=(0,0,0,0,0,0)
 handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.17)
-taskrh.opmodif = matrixToTuple(handMgrip)
+taskRH.opmodif = matrixToTuple(handMgrip)
 
 # CoM Task
 taskCom = MetaTaskDynCom(dyn,dt)
@@ -134,6 +136,8 @@ dqup = (1000,)*robotDim
 taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
 taskLim.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
 
+taskLim.controlGain.value = 1
+
 
 #-----------------------------------------------------------------------------
 # --- Stack of tasks controller  ---------------------------------------------
@@ -143,6 +147,9 @@ sot = SolverKine('sot')
 
 sot.setSize(robotDim)
 #sot.breakFactor.value = 10
+
+#sot.setSecondOrderKine(True)
+#plug(dyn.velocity,sot.velocityy)
 
 plug(sot.control, robot.control)
 plug(sot.control, robot.acceleration)
@@ -176,14 +183,16 @@ contactRF.feature.errordot.value=(0,0,0,0,0,0)
 #-----------------------------------------------------------------------------
 # --- TRACER ------------------------------------------------------------------
 #-----------------------------------------------------------------------------
-
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
-tr.open('/tmp/','dyn_','.dat')
-
+tr.open('/tmp/','','.dat')
+tr.start()
 robot.after.addSignal('tr.triger')
-robot.after.addSignal('dyn.com')
-robot.after.addSignal('taskLim.normalizedPosition')
+
+tr.add('dyn.com','com2')
+tr.add(taskRH.task.name+'.error','erh2')
+
+#history = History(dyn,1)
 
 
 #-----------------------------------------------------------------------------
@@ -207,8 +216,8 @@ sot.push(taskCom.task.name)
 
 target = (0.6,-0.2,1.1)
 robot.viewer.updateElementConfig('zmp',target+(0,0,0))
-sot.push(taskrh.task.name)
-gotoNd(taskrh, target, "000111")
+sot.push(taskRH.task.name)
+gotoNd(taskRH, target, "000111")
 
 sot.push(taskPosture.task.name)
 

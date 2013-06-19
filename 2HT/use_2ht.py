@@ -192,6 +192,9 @@ sot = SolverKine('sot')
 
 sot.setSize(robotDim)
 
+sot.setSecondOrderKine(True)
+plug(dyn.velocity,sot.velocityy)
+
 plug(sot.control, robot.control)
 plug(sot.control, robot.acceleration)
 
