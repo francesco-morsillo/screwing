@@ -136,6 +136,7 @@ dqup = (1000,)*robotDim
 taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
 taskLim.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
 
+taskLim.controlGain.value = 1
 
 #-----------------------------------------------------------------------------
 # --- Stack of tasks controller  ---------------------------------------------

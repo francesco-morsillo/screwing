@@ -128,6 +128,7 @@ taskLim.controlGain.value = 1
 
 
 # Task Inequality
+"""
 featureHeight = FeatureGeneric('featureHeight')
 plug(dyn.com,featureHeight.errorIN)
 plug(dyn.Jcom,featureHeight.jacobianIN)
@@ -138,7 +139,7 @@ taskHeight.selec.value = '100'
 taskHeight.referenceInf.value = (0.,0.,0.)    # Xmin, Ymin
 taskHeight.referenceSup.value = (0.,0.,0.83)  # Xmax, Ymax
 taskHeight.dt.value=dt
-
+"""
 
 #-----------------------------------------------------------------------------
 # --- Stack of tasks controller  ---------------------------------------------
@@ -148,8 +149,8 @@ sot = SolverKine('sot')
 
 sot.setSize(robotDim)
 
-#sot.setSecondOrderKine(True)
-#plug(dyn.velocity,sot.velocity)
+sot.setSecondOrderKine(True)
+plug(dyn.velocity,sot.velocity)
 
 plug(sot.control, robot.control)
 plug(sot.control, robot.acceleration)
@@ -276,36 +277,25 @@ target = vectorToTuple(array(matrixToRPY( refToTriggerMatrix )))
 gotoNd(taskLH, target, "110111",(50,1,0.01,0.9))
 
 gotoNd(taskChest,(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
+taskChest.task.errorTimeDerivative.value = [0., 0., 0.]
+
 
 gotoNd(taskWaist,(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
+taskWaist.task.errorTimeDerivative.value = [0., 0., 0.]
 
 # Sot
 sot.clear()
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 sot.push(taskLim.name)
-sot.push(taskHeight.name)
-#sot.push(taskWaist.task.name)
-#sot.push(taskChest.task.name)
+sot.push(taskWaist.task.name)
+sot.push(taskChest.task.name)
 sot.push(taskRH.task.name)
 sot.push(taskLH.task.name)
 sot.push(taskCom.task.name)
 sot.push(taskPosture.task.name)
 
 """
-attime(100
-       ,(lambda: sot.push(taskChest.task.name), "Add Chest to the SoT")
-       ,(lambda: sot.up(taskChest.task.name), "Raise Chest priority")
-       ,(lambda: sot.up(taskChest.task.name), "Raise Chest priority")
-       ,(lambda: sot.push(taskWaist.task.name), "Add Waist to the SoT")
-       ,(lambda: sot.up(taskWaist.task.name), "Raise Waist priority")
-       ,(lambda: sot.up(taskWaist.task.name), "Raise Waist priority")
-       ,(lambda: sot.push(taskCom.task.name), "Add Com to the SoT")
-       ,(lambda: sot.push(taskPosture.task.name), "Add Posture to the SoT")
-       )
-
-
-
 taskRH.feature.error.recompute(0)
 while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 	robot.increment(dt)
