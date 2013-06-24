@@ -14,7 +14,7 @@ from dynamic_graph.sot.dyninv import *
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph import plug
 
-from dynamic_graph.sot.core.matrix_util import matrixToTuple
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, RPYToMatrix, matrixToRPY
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 from dynamic_graph.sot.core.utils.attime import attime
@@ -36,17 +36,20 @@ import time
 
 robotName = 'hrp14small'
 robotDim   = robotDimension[robotName]
-RobotClass = RobotDynSimu
+RobotClass = RobotSimu
 robot      = RobotClass("robot")
 robot.resize(robotDim)
 
-pose = (-0.030073618647834879, 0.016415887002202933, 0.62245944857810387, -5.4272918219751486e-20, 2.2304361400809676e-20, 0.0092340515812077348, -0.0092340515812077365, -0.031684365127837365, -0.5963821161312286, 1.0426697092875947, -0.44628759315636635, 0.031684365127837365, -0.0092340515812077348, -0.03174248663241639, -0.60591626591827519, 1.0568307464403983, -0.45091448052212324, 0.03174248663241639, -0.011123297511703737, -0.087265999999999927, -0.00033750538179865144, -0.0005624238088200199, -0.30213952018426748, -0.71906866277071557, 0.70978391033338306, -1.7041087671646877, 1.5030587263678217, 0.48707940835840557, 0.17569313715492132, -0.38348731360690541, -0.17453299999999988, -0.80343898121984014, -1.041280119185096, -0.51958844641260804, 0.54990959413946805, 0.17519281104793244)#write_xml(pose)
+pose = (-0.030073618647834879, 0.016415887002202933, 0.62245944857810387, -5.4272918219751486e-20, 2.2304361400809676e-20, 0.0092340515812077348, -0.0092340515812077365, -0.031684365127837365, -0.5963821161312286, 1.0426697092875947, -0.44628759315636635, 0.031684365127837365, -0.0092340515812077348, -0.03174248663241639, -0.60591626591827519, 1.0568307464403983, -0.45091448052212324, 0.03174248663241639, -0.011123297511703737, -0.087265999999999927, -0.00033750538179865144, -0.0005624238088200199, -0.30213952018426748, -0.71906866277071557, 0.70978391033338306, -1.7041087671646877, 1.5030587263678217, 0.48707940835840557, 0.17569313715492132, -0.38348731360690541, -0.17453299999999988, -0.80343898121984014, -1.041280119185096, -0.51958844641260804, 0.54990959413946805, 0.17519281104793244)
+#write_xml(pose)
 #write_pos_py(pose[6:36])
 robot.set(pose)
 
 addRobotViewer(robot,small=True,verbose=False)
 
 dt=5e-3
+
+robot.setSecondOrderIntegration()
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
@@ -65,7 +68,7 @@ dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
-plug(robot.velocity,dyn.velocity)
+plug(robot.statedot,dyn.velocity)
 dyn.acceleration.value = robotDim*(0.,)
 
 dyn.ffposition.unplug()
@@ -139,7 +142,6 @@ plug(dyn.velocity,sot.velocity)
 sot.setSize(robotDim)
 
 plug(sot.control, robot.control)
-plug(sot.control, robot.acceleration)
 
 #-----------------------------------------------------------------------------
 # ---- CONTACT: Contact definition -------------------------------------------
@@ -193,15 +195,11 @@ roll = 0.
 pitch = pi/5
 yaw = pi/2
 
-TwoHandTool_pos = (xd,yd,zd)
-TwoHandTool_or = (roll,pitch,yaw)
-TwoHandTool = TwoHandTool_pos + TwoHandTool_or
+TwoHandTool = (xd,yd,zd,roll,pitch,yaw) 
 robot.viewer.updateElementConfig('TwoHandTool',TwoHandTool)
 
 # Homogeneous Matrix of the TwoHandTool. Normally given from the camera
-refToTwoHandToolMatrix = eye(4)
-refToTwoHandToolMatrix[0:3,0:3] = calcRotFromRPY(roll,pitch,yaw)
-refToTwoHandToolMatrix[0:3,3] = array([xd,yd,zd])
+refToTwoHandToolMatrix = array(RPYToMatrix(TwoHandTool))
 
 # Homogeneous Matrixes
 refToTriggerMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToTriggerMatrix)
@@ -210,36 +208,6 @@ refToSupportMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToSupportMatrix)
 # Homogeneous Matrix of the screwing part (rotation on z)
 refToScrewMatrix=dot(refToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 robot.viewer.updateElementConfig('zmp',vectorToTuple(refToScrewMatrix[0:3,3])+(0,0,0))
-
-"""
-# ------------------------------------------------------------------------------
-# --- MAIN LOOP ----------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-def inc():
-	robot.increment(dt)
-	attime.run(robot.control.time)
-	updateComDisplay(robot,dyn.com)
-    # verif.record()
-
-@loopInThread
-def loop():
-    inc()
-runner=loop()
-
-
-# --- shortcuts -------------------------------------------------
-@optionalparentheses
-def go(): runner.play()
-@optionalparentheses
-def stop(): runner.pause()
-@optionalparentheses
-def next(): inc()
-@optionalparentheses
-def iter():         print 'iter = ',robot.state.time
-@optionalparentheses
-def status():       print runner.isPlay
-"""
 
 
 
@@ -282,12 +250,46 @@ sot.push(taskRH.task.name)
 sot.push(taskCom.task.name)
 sot.push(taskPosture.task.name)
 
+taskRH.feature.error.recompute(0)
+RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 
+
+
+# ------------------------------------------------------------------------------
+# --- MAIN LOOP ----------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+def inc():
+    robot.increment(dt)
+    attime.run(robot.control.time)
+    updateComDisplay(robot,dyn.com)
+    updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
+    # verif.record()
+
+@loopInThread
+def loop():
+    inc()
+runner=loop()
+
+
+# --- shortcuts -------------------------------------------------
+@optionalparentheses
+def go(): runner.play()
+@optionalparentheses
+def stop(): runner.pause()
+@optionalparentheses
+def next(): inc()
+@optionalparentheses
+def iter():         print 'iter = ',robot.state.time
+@optionalparentheses
+def status():       print runner.isPlay
+
+
+
+"""
 start = time.clock()
 print start
 
-taskRH.feature.error.recompute(0)
-RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 	robot.increment(dt)
 	attime.run(robot.control.time)
@@ -301,3 +303,4 @@ stop = time.clock()
 print stop
 
 print "calculous time = " + str(stop-start)
+"""

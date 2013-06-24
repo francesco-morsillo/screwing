@@ -36,7 +36,7 @@ from numpy import *
 
 robotName = 'hrp14small'
 robotDim   = robotDimension[robotName]
-RobotClass = RobotDynSimu
+RobotClass = RobotSimu
 robot      = RobotClass("robot")
 robot.resize(robotDim)
 
@@ -51,6 +51,8 @@ robot.set( pose )
 addRobotViewer(robot,small=True,verbose=False)
 
 dt=5e-3
+
+robot.setSecondOrderIntegration()
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
@@ -69,7 +71,7 @@ dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
-plug(robot.velocity,dyn.velocity)
+plug(robot.statedot,dyn.velocity)
 dyn.acceleration.value = robotDim*(0.,)
 
 dyn.ffposition.unplug()
@@ -153,8 +155,6 @@ sot.setSecondOrderKine(True)
 plug(dyn.velocity,sot.velocity)
 
 plug(sot.control, robot.control)
-plug(sot.control, robot.acceleration)
-
 
 #-----------------------------------------------------------------------------
 # ---- CONTACT: Contact definition -------------------------------------------

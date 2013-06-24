@@ -36,11 +36,13 @@ from numpy import *
 
 robotName = 'hrp14small'
 robotDim   = robotDimension[robotName]
-RobotClass = RobotDynSimu
+RobotClass = RobotSimu
 robot      = RobotClass("robot")
 robot.resize(robotDim)
 
 dt=5e-3
+
+robot.setSecondOrderIntegration()
 
 # Robot and TwoHandTool in the origin
 xr=0.
@@ -115,7 +117,7 @@ dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
-plug(robot.velocity,dyn.velocity)
+plug(robot.statedot,dyn.velocity)
 dyn.acceleration.value = robotDim*(0.,)
 
 dyn.ffposition.unplug()
@@ -193,11 +195,9 @@ sot = SolverKine('sot')
 sot.setSize(robotDim)
 
 sot.setSecondOrderKine(True)
-plug(dyn.velocity,sot.velocityy)
+plug(dyn.velocity,sot.velocity)
 
 plug(sot.control, robot.control)
-plug(sot.control, robot.acceleration)
-
 
 #-----------------------------------------------------------------------------
 # ---- CONTACT: Contact definition -------------------------------------------
@@ -235,38 +235,6 @@ tr.open('/tmp/','dyn_','.dat')
 robot.after.addSignal('tr.triger')
 robot.after.addSignal('dyn.com')
 robot.after.addSignal('taskLim.normalizedPosition')
-
-"""
-# ------------------------------------------------------------------------------
-# --- MAIN LOOP ----------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-def inc():
-	robot.increment(dt)
-	attime.run(robot.control.time)
-	updateComDisplay(robot,dyn.com)
-	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
-    # verif.record()
-
-@loopInThread
-def loop():
-    inc()
-runner=loop()
-
-
-# --- shortcuts -------------------------------------------------
-@optionalparentheses
-def go(): runner.play()
-@optionalparentheses
-def stop(): runner.pause()
-@optionalparentheses
-def next(): inc()
-@optionalparentheses
-def iter():         print 'iter = ',robot.state.time
-@optionalparentheses
-def status():       print runner.isPlay
-"""
-
 
 
 #-----------------------------------------------------------------------------
@@ -351,6 +319,8 @@ sot.push(taskWaist.task.name)
 sot.push(taskChest.task.name)
 sot.push(taskPosture.task.name)
 
+sot.damping.value = 0.1
+
 # Motion recording
 zmp_out = open("/tmp/data.zmp","w")
 hip_out = open("/tmp/data.hip","w")
@@ -392,3 +362,33 @@ for i in range(4):
 
 
 
+"""
+# ------------------------------------------------------------------------------
+# --- MAIN LOOP ----------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+def inc():
+	robot.increment(dt)
+	attime.run(robot.control.time)
+	updateComDisplay(robot,dyn.com)
+	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
+    # verif.record()
+
+@loopInThread
+def loop():
+    inc()
+runner=loop()
+
+
+# --- shortcuts -------------------------------------------------
+@optionalparentheses
+def go(): runner.play()
+@optionalparentheses
+def stop(): runner.pause()
+@optionalparentheses
+def next(): inc()
+@optionalparentheses
+def iter():         print 'iter = ',robot.state.time
+@optionalparentheses
+def status():       print runner.isPlay
+"""
