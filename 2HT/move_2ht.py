@@ -28,7 +28,7 @@ from dynamic_graph.sot.fmorsill.utility import *
 from dynamic_graph.sot.fmorsill.rob_view_lib import *
 
 from numpy import *
-
+import time
 
 # ------------------------------------------------------------------------------
 # --- ROBOT DYNAMIC SIMULATION -------------------------------------------------
@@ -132,11 +132,11 @@ taskLim.controlGain.value = 1
 #-----------------------------------------------------------------------------
 
 sot = SolverKine('sot')
+
 sot.setSecondOrderKine(True)
+plug(dyn.velocity,sot.velocity)
 
 sot.setSize(robotDim)
-
-plug(dyn.velocity,sot.velocityy)
 
 plug(sot.control, robot.control)
 plug(sot.control, robot.acceleration)
@@ -283,6 +283,9 @@ sot.push(taskCom.task.name)
 sot.push(taskPosture.task.name)
 
 
+start = time.clock()
+print start
+
 taskRH.feature.error.recompute(0)
 RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),refToTwoHandToolMatrix)
 while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
@@ -292,6 +295,9 @@ while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 	updateToolDisplay(taskRH,RHToTwoHandToolMatrix,robot)
 
 print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
+print "execution time = " +str(robot.control.time)
 
+stop = time.clock()
+print stop
 
-
+print "calculous time = " + str(stop-start)
