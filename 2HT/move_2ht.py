@@ -68,7 +68,7 @@ dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
-plug(robot.statedot,dyn.velocity)
+plug(robot.velocity,dyn.velocity)
 dyn.acceleration.value = robotDim*(0.,)
 
 dyn.ffposition.unplug()
@@ -240,6 +240,24 @@ gotoNd(taskRH, targetRH, "111111",(50,1,0.01,0.9))
 gotoNdRel(taskRel,taskRH.feature.position.value,taskLH.feature.position.value,'110111',(50,1,0.01,0.9))
 taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
+
+############################################################
+
+featureWaist    = FeaturePoint6d('featureWaist')
+plug(dyn.waist,featureWaist.position)
+plug(dyn.Jwaist,featureWaist.Jq)
+taskWaist=TaskDynInequality('taskWaist')
+plug(dyn.velocity,taskWaist.qdot)
+taskWaist.add(featureWaist.name)
+taskWaist.selec.value = '010000'
+taskWaist.referenceInf.value = (0.,0.,0,0,0,0)    # Ymin
+taskWaist.referenceSup.value = (0.,0.5,0,0,0,0)  # Ymax
+taskWaist.dt.value=dt
+
+
+############################################################
+
+
 # Sot
 sot.clear()
 sot.addContact(contactLF)
@@ -248,6 +266,7 @@ sot.push(taskLim.name)
 sot.push(taskRel.task.name)
 sot.push(taskRH.task.name)
 sot.push(taskCom.task.name)
+sot.push(taskWaist.name)
 sot.push(taskPosture.task.name)
 
 taskRH.feature.error.recompute(0)

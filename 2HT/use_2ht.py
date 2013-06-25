@@ -117,7 +117,7 @@ dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
-plug(robot.statedot,dyn.velocity)
+plug(robot.velocity,dyn.velocity)
 dyn.acceleration.value = robotDim*(0.,)
 
 dyn.ffposition.unplug()
@@ -272,7 +272,7 @@ taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
 ###################################################################################################################
 
-
+"""
 gotoNd(taskChest,(0.,0.,0.,0.,0.1,0.),'110000')	# inside the function rot=0 --> we set a random position not to control it
 taskChest.gain.setConstant(1)
 
@@ -281,29 +281,28 @@ taskWaist.gain.setConstant(1)
 
 
 """
-dyn.createOpPoint('waist','waist')
 featureWaist    = FeaturePoint6d('featureWaist')
 plug(dyn.waist,featureWaist.position)
 plug(dyn.Jwaist,featureWaist.Jq)
-taskWaist=TaskInequality('taskWaist')
+taskWaist=TaskDynInequality('taskWaist')
+plug(dyn.velocity,taskWaist.qdot)
 taskWaist.add(featureWaist.name)
 taskWaist.selec.value = '010000'
-taskWaist.referenceInf.value = (0.,-0.1,0,0,0,0)    # Xmin, Ymin
-taskWaist.referenceSup.value = (0.,0.5,0,0,0,0)  # Xmax, Ymax
+taskWaist.referenceInf.value = (0.,-100.,0,0,0,0)    # Ymin
+taskWaist.referenceSup.value = (0.,0.5,0,0,0,0)  # Ymax
 taskWaist.dt.value=dt
 
 
-dyn.createOpPoint('chest','chest')
 featureChest    = FeaturePoint6d('featureChest')
 plug(dyn.chest,featureChest.position)
 plug(dyn.Jchest,featureChest.Jq)
-taskChest=TaskInequality('taskChest')
+taskChest=TaskDynInequality('taskChest')
+plug(dyn.velocity,taskChest.qdot)
 taskChest.add(featureChest.name)
 taskChest.selec.value = '010000'
-taskChest.referenceInf.value = (0.,-0.5,0,0,0,0)    # Xmin, Ymin
-taskChest.referenceSup.value = (0.,0.,0,0,0,0)  # Xmax, Ymax
+#taskChest.referenceInf.value = (0.,-0.4,0,0,0,0)    # Xmin, Ymin
+#taskChest.referenceSup.value = (0.,0.5,0,0,0,0)  # Xmax, Ymax
 taskChest.dt.value=dt
-"""
 
 ###################################################################################################################
 
@@ -315,25 +314,25 @@ sot.push(taskLim.name)
 sot.push(taskRel.task.name)
 sot.push(taskScrew.task.name)
 sot.push(taskCom.task.name)
-sot.push(taskWaist.task.name)
-sot.push(taskChest.task.name)
+sot.push(taskWaist.name)
+#sot.push(taskChest.name)
 sot.push(taskPosture.task.name)
 
 sot.damping.value = 0.1
 
 # Motion recording
-zmp_out = open("/tmp/data.zmp","w")
-hip_out = open("/tmp/data.hip","w")
-pos_out = open("/tmp/data.pos","w")
+#zmp_out = open("/tmp/data.zmp","w")
+#hip_out = open("/tmp/data.hip","w")
+#pos_out = open("/tmp/data.pos","w")
 
 def do():
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
 	updateToolDisplay(taskScrew,linalg.inv(TwoHandToolToScrewMatrix),robot)
-	record_zmp(robot,dyn,zmp_out,dt)
-	record_hip(robot,dyn,hip_out,dt)
-	record_pos(robot,dyn,pos_out,dt)
+	#record_zmp(robot,dyn,zmp_out,dt)
+	#record_hip(robot,dyn,hip_out,dt)
+	#record_pos(robot,dyn,pos_out,dt)
 
 def go_to(goal,pos_err_des,screw_len):
 
@@ -357,7 +356,7 @@ def go_to(goal,pos_err_des,screw_len):
 		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > pos_err_des: #for j in range(1): #
 			do()
 
-for i in range(4):
+for i in range(1):
 	go_to(goal[i],pos_err_des,screw_len)
 
 
