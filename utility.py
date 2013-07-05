@@ -72,8 +72,8 @@ def calcRotFromAA(rx,ry,rz,theta):
 
 # From the reference to the handles.
 TwoHandToolToTriggerMatrix=eye(4); TwoHandToolToTriggerMatrix[0:3,0:3]=array([[-1.,0.,0.],[0.,-1.,0.],[0.,0.,1.]])
-TwoHandToolToTriggerMatrix[0:3,3] = (0.25,0.,0.)
-TwoHandToolToSupportMatrix=eye(4); TwoHandToolToSupportMatrix[0:3,3] = (-0.03,0.,0.)
+TwoHandToolToTriggerMatrix[0:3,3] = (0.23,0.,0.)
+TwoHandToolToSupportMatrix=eye(4); TwoHandToolToSupportMatrix[0:3,3] = (0.03,0.,0.)
 
 # From the reference to the screwing part (rotation on z)
 TwoHandToolToScrewMatrix=array([[1.,0.,0.,-0.115],[0.,0.,-1.,-0.03],[0.,1.,0.,0.],[0.,0.,0.,1.]])
@@ -196,10 +196,9 @@ def write_pos_py(src_rep,pos30): #no free-floating
 
 
 
-
-
-
-
+################################################################################
+# OPEN HRP FUNCTIONS #
+################################################################################
 
 
 

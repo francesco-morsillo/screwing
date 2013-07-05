@@ -85,14 +85,11 @@ robot.control.unplug()
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
-taskWaist = MetaTaskDyn6d('taskWaist', dyn, 'waist', 'waist')
-taskChest = MetaTaskDyn6d('taskChest', dyn, 'chest', 'chest')
-taskHead  = MetaTaskDyn6d('taskHead', dyn, 'head', 'gaze')
 taskRH    = MetaTaskDyn6d('rh', dyn, 'rh', 'right-wrist')
 taskLH    = MetaTaskDyn6d('lh', dyn, 'lh', 'left-wrist')
 taskRel = MetaTaskDyn6dRel('rel',dyn,'rh','lh','right-wrist','left-wrist')
 
-for task in [ taskWaist, taskChest, taskHead, taskRH, taskLH, taskRel]:
+for task in [ taskRH, taskLH, taskRel]:
     task.feature.frame('current')
     task.gain.setConstant(10)
     task.task.dt.value = dt
@@ -243,16 +240,20 @@ taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
 ############################################################
 
+
+#Task Waist
+dyn.createOpPoint('waist','waist')
 featureWaist    = FeaturePoint6d('featureWaist')
 plug(dyn.waist,featureWaist.position)
 plug(dyn.Jwaist,featureWaist.Jq)
 taskWaist=TaskDynInequality('taskWaist')
 plug(dyn.velocity,taskWaist.qdot)
 taskWaist.add(featureWaist.name)
-taskWaist.selec.value = '010000'
-taskWaist.referenceInf.value = (0.,0.,0,0,0,0)    # Ymin
-taskWaist.referenceSup.value = (0.,0.5,0,0,0,0)  # Ymax
+taskWaist.selec.value = '110000'
+taskWaist.referenceInf.value = (0.,0.,0.,0.,-0.1,-0.7)    # Roll Pitch Yaw min
+taskWaist.referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
 taskWaist.dt.value=dt
+taskWaist.controlGain.value = 10
 
 
 ############################################################

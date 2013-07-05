@@ -54,7 +54,7 @@ yawr=0.
 
 xTool = 0.4
 yTool = -0.2
-zTool = 1.
+zTool = 0.9
 rollTool = 0.
 pitchTool = pi/5
 yawTool = pi/2
@@ -69,8 +69,12 @@ roll0=0.
 pitch0=0.
 yaw0=0.#pi/2
 
+#grip_angle = 0.17569313715492132
+grip_angle_rh = 0.11
+grip_angle_sh = 0.05
+
 # Center initial configuration
-pose = (-0.030073618647834879, 0.016415887002202933, 0.62245944857810387, -5.4272918219751486e-20, 2.2304361400809676e-20, 0.0092340515812077348, -0.0092340515812077365, -0.031684365127837365, -0.5963821161312286, 1.0426697092875947, -0.44628759315636635, 0.031684365127837365, -0.0092340515812077348, -0.03174248663241639, -0.60591626591827519, 1.0568307464403983, -0.45091448052212324, 0.03174248663241639, -0.011123297511703737, -0.087265999999999927, -0.00033750538179865144, -0.0005624238088200199, -0.30213952018426748, -0.71906866277071557, 0.70978391033338306, -1.7041087671646877, 1.5030587263678217, 0.48707940835840557, 0.17569313715492132, -0.38348731360690541, -0.17453299999999988, -0.80343898121984014, -1.041280119185096, -0.51958844641260804, 0.54990959413946805, 0.17519281104793244)
+pose = (-0.040171724537852692, 0.012554979677786016, 0.60038972621653741, -1.8324817401555846e-19, 3.3881986601669945e-19, -4.9281601434382094e-19, 8.7466141738804274e-19, -0.025315586588404569, -0.68866188267197115, 1.1779122640040864, -0.48925038133211551, 0.025315586588404573, 3.8928477315524647e-19, -0.02536092979672944, -0.69429072446021389, 1.1884597599934046, -0.49416903553319086, 0.025360929796729451, 3.2487817247183095e-20, -9.8883744822907284e-21, 0.0052206037085911327, -0.015577636215755253, -0.35409243163848308, -0.45866960043208704, 0.90541127100176388, -1.4009012738515936, 1.6057030000000001, 0.70851947851179609, grip_angle_rh, -0.63488862696875059, -0.17453299999999999, -1.0736852932781615, -0.70107411555135457, -0.120960197588031, 0.36479488979894936, grip_angle_sh)
 #write_xml("/opt/grx3.0/HRP2LAAS/project/",pose)
 write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",pose[6:36])
 robot.set(pose)
@@ -134,14 +138,11 @@ robot.control.unplug()
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
-taskWaist = MetaTaskDyn6d('taskWaist', dyn, 'waist', 'waist')
-taskChest = MetaTaskDyn6d('taskChest', dyn, 'chest', 'chest')
-taskHead  = MetaTaskDyn6d('taskHead', dyn, 'head', 'gaze')
 taskRH    = MetaTaskDyn6d('rh', dyn, 'rh', 'right-wrist')
 taskLH    = MetaTaskDyn6d('lh', dyn, 'lh', 'left-wrist')
 taskRel = MetaTaskDyn6dRel('rel',dyn,'rh','lh','right-wrist','left-wrist')
 
-for task in [taskHead, taskRH, taskLH, taskRel, taskWaist, taskChest]:
+for task in [taskRH, taskLH, taskRel]:
     task.feature.frame('current')
     task.task.dt.value = dt
     task.featureDes.velocity.value=(0,0,0,0,0,0)
@@ -153,13 +154,6 @@ taskLH.opmodif = matrixToTuple(handMgrip)
 # RELATIVE POSITION TASK
 taskRel.opmodif = matrixToTuple(handMgrip)
 taskRel.opmodifBase = matrixToTuple(handMgrip)
-
-# CoM Task
-taskCom = MetaTaskDynCom(dyn,dt)
-
-# Posture Task
-taskPosture = MetaTaskDynPosture(dyn,dt)
-
 
 # Angular position and velocity limits
 taskLim = TaskDynLimits('taskLim')
@@ -178,11 +172,6 @@ taskLim.controlGain.value = 1
 dqup = (1000,)*robotDim
 taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
 taskLim.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
-
-###
-featureHeight = FeatureGeneric('featureHeight')
-plug(dyn.com,featureHeight.errorIN)
-plug(dyn.Jcom,featureHeight.jacobianIN)
 
 
 
@@ -241,16 +230,9 @@ robot.after.addSignal('taskLim.normalizedPosition')
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-# Task references
-dyn.com.recompute(0)
-taskCom.featureDes.errorIN.value = dyn.com.value
-taskCom.task.controlGain.value = 10
-
-taskPosture.ref = halfSittingConfig[robotName]
-#taskPosture.ref = pose
-
-taskCom.feature.selec.value = '011'
-taskCom.gain.setConstant(0.1)
+######################################################################
+###------TASK EQUALITY------------------------------------------------
+######################################################################
 
 #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
 taskRH.feature.position.recompute(0)
@@ -259,80 +241,93 @@ RHToTwoHandToolMatrix = dot(linalg.inv(array(taskRH.feature.position.value)),ref
 #!!!!!! RH and Height are different references, because the X rotation is not controlled in positioning!!!!!!!!!!!!!!!!!!!!!!!!!!
 RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
-# TASK SCREW creation
+# TASK Screw
 taskScrew=MetaTaskDyn6d('screw',dyn,'screw','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
 taskScrew.featureDes.velocity.value=(0,0,0,0,0,0)
 taskScrew.feature.selec.value = '011111'
-taskScrew.gain.setByPoint(100,5,0.01,0.9)
+taskScrew.gain.setByPoint(100,1,0.01,0.9)
 
-#gotoNd(taskScrew, goal1, "011111",(100,5,0.01,0.9))
-
-gotoNdRel(taskRel,array(taskRH.feature.position.value),array(taskLH.feature.position.value),'110111',1000)
+# Task Relative
+gotoNdRel(taskRel,array(taskRH.feature.position.value),array(taskLH.feature.position.value),'110111',500)
 taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
-###################################################################################################################
+# Task Posture
+taskPosture = MetaTaskDynPosture(dyn,dt)
+#taskPosture.ref = halfSittingConfig[robotName]
+taskPosture.ref = pose
+taskPosture.gain.setConstant(5)
 
-"""
-gotoNd(taskChest,(0.,0.,0.,0.,0.1,0.),'110000')	# inside the function rot=0 --> we set a random position not to control it
-taskChest.gain.setConstant(1)
+# Task Com
+taskCom = MetaTaskDynCom(dyn,dt)
+dyn.com.recompute(0)
+taskCom.featureDes.errorIN.value = dyn.com.value
+taskCom.feature.selec.value = '011'
+taskCom.gain.setConstant(1)
 
-gotoNd(taskWaist,(0.,0.,0.,0.,0.,0.),'110000')	# inside the function rot=0 --> we set a random position not to control it
-taskWaist.gain.setConstant(1)
 
+######################################################################
+###------TASK INEQUALITY----------------------------------------------
+######################################################################
 
-"""
+#Task Waist
+dyn.createOpPoint('waist','waist')
 featureWaist    = FeaturePoint6d('featureWaist')
 plug(dyn.waist,featureWaist.position)
 plug(dyn.Jwaist,featureWaist.Jq)
 taskWaist=TaskDynInequality('taskWaist')
 plug(dyn.velocity,taskWaist.qdot)
 taskWaist.add(featureWaist.name)
-taskWaist.selec.value = '010000'
-taskWaist.referenceInf.value = (0.,-100.,0,0,0,0)    # Ymin
-taskWaist.referenceSup.value = (0.,0.5,0,0,0,0)  # Ymax
+taskWaist.selec.value = '110000'
+taskWaist.referenceInf.value = (0.,0.,0.,0.,-0.2,-0.7)    # Roll Pitch Yaw min
+taskWaist.referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
 taskWaist.dt.value=dt
+taskWaist.controlGain.value = 10
 
-
+#Task Chest
+dyn.createOpPoint('chest','chest')
 featureChest    = FeaturePoint6d('featureChest')
 plug(dyn.chest,featureChest.position)
 plug(dyn.Jchest,featureChest.Jq)
 taskChest=TaskDynInequality('taskChest')
 plug(dyn.velocity,taskChest.qdot)
 taskChest.add(featureChest.name)
-taskChest.selec.value = '010000'
-#taskChest.referenceInf.value = (0.,-0.4,0,0,0,0)    # Xmin, Ymin
-#taskChest.referenceSup.value = (0.,0.5,0,0,0,0)  # Xmax, Ymax
+taskChest.selec.value = '110000'
+taskChest.referenceInf.value = (0.,0.,0.,0.,-0.2,-0.7)    # Roll Pitch Yaw min 
+taskChest.referenceSup.value = (0.,0.,0.,0.,0.3,0.7)   # Roll Pitch Yaw max
 taskChest.dt.value=dt
+taskChest.controlGain.value = 10
 
-###################################################################################################################
 
-# Sot
+######################################################################
+###------SOT CHARGING-------------------------------------------------
+######################################################################
+
 sot.clear()
 sot.addContact(contactLF)
 sot.addContact(contactRF)
 sot.push(taskLim.name)
 sot.push(taskRel.task.name)
-sot.push(taskScrew.task.name)
 sot.push(taskCom.task.name)
+sot.push(taskScrew.task.name)
 sot.push(taskWaist.name)
-#sot.push(taskChest.name)
+sot.push(taskChest.name)
 sot.push(taskPosture.task.name)
 
 sot.damping.value = 0.1
 
 # Motion recording
-#zmp_out = open("/tmp/data.zmp","w")
-#hip_out = open("/tmp/data.hip","w")
-#pos_out = open("/tmp/data.pos","w")
+zmp_out = open("/tmp/data.zmp","w")
+hip_out = open("/tmp/data.hip","w")
+pos_out = open("/tmp/data.pos","w")
 
 def do():
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
 	updateToolDisplay(taskScrew,linalg.inv(TwoHandToolToScrewMatrix),robot)
-	#record_zmp(robot,dyn,zmp_out,dt)
-	#record_hip(robot,dyn,hip_out,dt)
-	#record_pos(robot,dyn,pos_out,dt)
+	record_zmp(robot,dyn,zmp_out,dt)
+	record_hip(robot,dyn,hip_out,dt)
+	record_pos(robot,dyn,pos_out,dt)
 
 def go_to(goal,pos_err_des,screw_len):
 
@@ -344,6 +339,7 @@ def go_to(goal,pos_err_des,screw_len):
 
 	# mini-task sequence definition
 	action = array([preparationMatrix,refToGoalMatrix,preparationMatrix])
+	desired_error = array([pos_err_des*10,pos_err_des,pos_err_des*10])
 
 	for i in range(3):
 
@@ -353,10 +349,10 @@ def go_to(goal,pos_err_des,screw_len):
 		# Aim setting
 		taskScrew.ref = matrixToTuple(action[i])
 		do()
-		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > pos_err_des: #for j in range(1): #
+		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > desired_error[i]:
 			do()
 
-for i in range(1):
+for i in range(4):
 	go_to(goal[i],pos_err_des,screw_len)
 
 

@@ -259,9 +259,10 @@ dyn.com.recompute(0)
 taskCom.featureDes.errorIN.value = dyn.com.value
 taskCom.task.controlGain.value = 10
 taskCom.feature.selec.value = '011'
-taskCom.gain.setConstant(0.1)
+taskCom.gain.setConstant(1)
 
 taskPosture.ref = pose
+taskPosture.gain.setConstant(10)
 
 
 # Set the target for RH and LH task. Selec is the activation flag (say control only
