@@ -63,10 +63,10 @@ def createTasks(robot, displacementMatrix):
 	taskRel.opmodifBase = matrixToTuple(handMgrip)
 
 
-	# Set the target for RH and LH task. Selec is the activation flag (say control only
-	# the XYZ translation), and gain is the adaptive gain (10 at the target, 0.1
-	# far from it, with slope st. at 0.01m from the target, 90% of the max gain
-	# value is reached
+	# Set the targets. Selec is the activation flag (say control only
+# the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
+# far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
+# value is reached
 	taskRH.feature.position.recompute(robot.device.control.time)
 	taskLH.feature.position.recompute(robot.device.control.time)
 	targetLH = vectorToTuple(array(matrixToRPY( dot(displacementMatrix,array(taskLH.feature.position.value)) )))
