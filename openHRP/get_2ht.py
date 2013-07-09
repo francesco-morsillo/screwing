@@ -28,7 +28,9 @@ script creates and loads the following tasks:
 """
 
 from dynamic_graph import plug
+from dynamic_graph.tracer import *
 from dynamic_graph.sot.core import FeatureGeneric
+from dynamic_graph.sot.core.feature_vector3 import *
 from dynamic_graph.sot.dyninv import TaskDynInequality
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple, matrixToRPY, RPYToMatrix
 from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
@@ -37,6 +39,23 @@ from dynamic_graph.sot.dyninv.meta_tasks_dyn import gotoNd
 from dynamic_graph.sot.fmorsill.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix
 
 from numpy import *
+
+
+#-----------------------------------------------------------------------------
+# --- TRACER ------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+
+def createTraces(robot):
+
+    tr = Tracer('tr')
+    tr.open('/tmp/','OH_','.dat')
+    tr.start()
+    robot.device.after.addSignal('tr.triger')
+
+    tr.add('robot.device.state','qn')
+
+    robot.device.after.addSignal('tr.triger')
+    robot.device.after.addSignal('robot.device.state')
 
 
 #-----------------------------------------------------------------------------
@@ -52,7 +71,7 @@ def createTasks(robot,TwoHandTool):
     yd = -0.2
     zd = 0.9
     roll = 0.
-    pitch = pi/5
+    pitch = 0.
     yaw = pi/2
     """
 
@@ -100,11 +119,26 @@ def createTasks(robot,TwoHandTool):
     # the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
     # value is reached
-    target = vectorToTuple(array(matrixToRPY( refToSupportMatrix )))
-    gotoNd(taskRH, target, "110111",(50,1,0.01,0.9))
+    target = vectorToTuple(refToSupportMatrix[0:3,3])
+    gotoNd(taskRH, target, "000111",(50,1,0.01,0.9))
     
-    target = vectorToTuple(array(matrixToRPY( refToTriggerMatrix )))
-    gotoNd(taskLH, target, "110111",(50,1,0.01,0.9))
+    target = vectorToTuple(refToTriggerMatrix[0:3,3])
+    gotoNd(taskLH, target, "000111",(50,1,0.01,0.9))
+    
+    # Orientation RF and LF - Needed featureVector3 to get desired behaviour
+    featureVecRH = FeatureVector3("featureVecRH")
+    plug(robot.dynamic.signal('rh'),featureVecRH.signal('position'))
+    plug(robot.dynamic.signal('Jrh'),featureVecRH.signal('Jq'))
+    featureVecRH.vector.value = array([1.,0.,0.])
+    featureVecRH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([1.,0.,0.]))
+    taskRH.task.add(featureVecRH.name)
+    
+    featureVecLH = FeatureVector3("featureVecLH")
+    plug(robot.dynamic.signal('lh'),featureVecLH.signal('position'))
+    plug(robot.dynamic.signal('Jlh'),featureVecLH.signal('Jq'))
+    featureVecLH.vector.value = array([1.,0.,0.])
+    featureVecLH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
+    taskLH.task.add(featureVecLH.name)
     
     gotoNd(taskChest,(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
     taskChest.task.errorTimeDerivative.value = [0., 0., 0.]
@@ -121,7 +155,7 @@ def createTasks(robot,TwoHandTool):
 
 def move(solver, tasks):
     
-    solver.sot.damping.value = 0.1
+    solver.sot.damping.value = 0.001
 
     for i in range(size(tasks)):
         solver.push(tasks[i])

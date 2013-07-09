@@ -1,9 +1,9 @@
 # ______________________________________________________________________________
 # ******************************************************************************
 #
-#    BASIC EXAMPLE OF THE DYNAMIC SOT
+#    GET USING-TOOL POSITION
 #       Robot: HRP-2 N.14
-#       Tasks: Rotate the head and move the arms
+#       Tasks: Reach the "using-tool position" from half-sitting position
 # 
 # ______________________________________________________________________________
 # ******************************************************************************  
@@ -26,6 +26,7 @@ from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, g
 
 from dynamic_graph.sot.fmorsill.utility import *
 from dynamic_graph.sot.fmorsill.rob_view_lib import *
+from dynamic_graph.sot.core.feature_vector3 import *
 
 from numpy import *
 
@@ -90,10 +91,11 @@ robot.control.unplug()
 
 # TwoHandTool
 xd = 0.4
-yd = -0.2
+yd = -0.13
 zd = 0.9
 roll = 0.
-pitch = pi/5
+#pitch = pi/5
+pitch = 0
 yaw = pi/2
 
 TwoHandTool = (xd,yd,zd,roll,pitch,yaw)
@@ -149,7 +151,7 @@ dqup = (1000,)*robotDim
 taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
 taskLim.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
 
-taskLim.controlGain.value = 1
+taskLim.controlGain.value = 0.3
 
 
 # Task Inequality
@@ -164,6 +166,7 @@ taskHeight.selec.value = '100'
 taskHeight.referenceInf.value = (0.,0.,0.)    # Zmin
 taskHeight.referenceSup.value = (0.,0.,0.81)  # Zmax
 taskHeight.dt.value=dt
+taskHeight.controlGain.value = 1.0
 
 #-----------------------------------------------------------------------------
 # --- Stack of tasks controller  ---------------------------------------------
@@ -221,6 +224,7 @@ robot.after.addSignal('tr.triger')
 
 tr.add('robot.state','qn')
 tr.add('dyn.com','com')
+tr.add('taskLim.normalizedPosition','qnorm')
 
 robot.after.addSignal('tr.triger')
 robot.after.addSignal('dyn.com')
@@ -276,13 +280,28 @@ taskPosture.gain.setConstant(5)
 # the XYZ translation), and gain is the adaptive gain (10 at the target, 0.1
 # far from it, with slope st. at 0.01m from the target, 90% of the max gain
 # value is reached
+target = vectorToTuple(refToSupportMatrix[0:3,3])
+gotoNd(taskRH, target, "000111",(50,1,0.01,0.9))
 
-target = vectorToTuple(array(matrixToRPY( refToSupportMatrix )))
-#target = (0.3,-.2,0.7,0.,0.,0.)
-gotoNd(taskRH, target, "110111",(50,1,0.01,0.9))
+target = vectorToTuple(refToTriggerMatrix[0:3,3])
+gotoNd(taskLH, target, "000111",(50,1,0.01,0.9))
 
-target = vectorToTuple(array(matrixToRPY( refToTriggerMatrix )))
-gotoNd(taskLH, target, "110111",(50,1,0.01,0.9))
+# Orientation RF and LF
+featureVecRH = FeatureVector3("featureVecRH")
+plug(dyn.signal('rh'),featureVecRH.signal('position'))
+plug(dyn.signal('Jrh'),featureVecRH.signal('Jq'))
+featureVecRH.vector.value = array([1.,0.,0.])
+featureVecRH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([1.,0.,0.]))
+taskRH.task.add(featureVecRH.name)
+
+featureVecLH = FeatureVector3("featureVecLH")
+plug(dyn.signal('lh'),featureVecLH.signal('position'))
+plug(dyn.signal('Jlh'),featureVecLH.signal('Jq'))
+featureVecLH.vector.value = array([1.,0.,0.])
+featureVecLH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
+taskLH.task.add(featureVecLH.name)
+
+
 
 gotoNd(taskChest,(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
 taskChest.task.errorTimeDerivative.value = [0., 0., 0.]
@@ -295,8 +314,6 @@ taskWaist.task.errorTimeDerivative.value = [0., 0., 0.]
 sot.clear()
 sot.addContact(contactLF)
 sot.addContact(contactRF)
-#sot.push(contactLF.task.name)
-#sot.push(contactRF.task.name)
 sot.push(taskLim.name)
 sot.push(taskCom.task.name)
 sot.push(taskRH.task.name)
