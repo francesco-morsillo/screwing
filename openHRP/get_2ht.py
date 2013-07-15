@@ -38,8 +38,9 @@ from dynamic_graph.sot.dyninv.meta_tasks_dyn import gotoNd
 
 from dynamic_graph.sot.fmorsill.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix
 
-from numpy import *
+from numpy import eye,array,dot,pi
 
+from dynamic_graph.sot.fmorsill.openHRP.move_2ht import removeUndesiredTasks
 
 #-----------------------------------------------------------------------------
 # --- TRACER ------------------------------------------------------------------
@@ -62,7 +63,7 @@ def createTraces(robot):
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
-def createTasks(robot,TwoHandTool):
+def get_2ht(robot,solver,TwoHandTool):
 
     # ---- STOOL PARAMETERS -------------------------------------------------------------------
     """
@@ -86,44 +87,28 @@ def createTasks(robot,TwoHandTool):
 
 
     # ---- TASKS DEFINITION -------------------------------------------------------------------
-    taskWaist = MetaTaskDyn6d('taskWaist', robot.dynamic, 'waist', 'waist')
-    taskChest = MetaTaskDyn6d('taskChest', robot.dynamic, 'chest', 'chest')
-    taskRH    = MetaTaskDyn6d('rh', robot.dynamic, 'rh', 'right-wrist')
-    taskLH    = MetaTaskDyn6d('lh', robot.dynamic, 'lh', 'left-wrist')
-    
-    for task in [ taskWaist, taskChest, taskRH, taskLH]:
-        task.feature.frame('desired')
-        task.gain.setConstant(10)
-        task.task.dt.value = robot.timeStep
-        task.featureDes.velocity.value=(0,0,0,0,0,0)
-    
-    
-    handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.14)
-    taskRH.opmodif = matrixToTuple(handMgrip)
-    taskLH.opmodif = matrixToTuple(handMgrip)
-    
     
     # Task Inequality
     featureHeight = FeatureGeneric('featureHeight')
     plug(robot.dynamic.com,featureHeight.errorIN)
     plug(robot.dynamic.Jcom,featureHeight.jacobianIN)
-    taskHeight=TaskDynInequality('taskHeight')
-    plug(robot.dynamic.velocity,taskHeight.qdot)
-    taskHeight.add(featureHeight.name)
-    taskHeight.selec.value = '100'
-    taskHeight.referenceInf.value = (0.,0.,0.)    # Xmin, Ymin
-    taskHeight.referenceSup.value = (0.,0.,0.83)  # Xmax, Ymax
-    taskHeight.dt.value=robot.timeStep
+    robot.taskHeight=TaskDynInequality('taskHeight')
+    plug(robot.dynamic.velocity,robot.taskHeight.qdot)
+    robot.taskHeight.add(featureHeight.name)
+    robot.taskHeight.selec.value = '100'
+    robot.taskHeight.referenceInf.value = (0.,0.,0.)    # Xmin, Ymin
+    robot.taskHeight.referenceSup.value = (0.,0.,0.83)  # Xmax, Ymax
+    robot.taskHeight.dt.value=robot.timeStep
 
     # Set the targets. Selec is the activation flag (say control only
     # the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
     # value is reached
     target = vectorToTuple(refToSupportMatrix[0:3,3])
-    gotoNd(taskRH, target, "000111",(50,1,0.01,0.9))
+    gotoNd(robot.mTasks['rh'], target, "000111",(50,1,0.01,0.9))
     
     target = vectorToTuple(refToTriggerMatrix[0:3,3])
-    gotoNd(taskLH, target, "000111",(50,1,0.01,0.9))
+    gotoNd(robot.mTasks['lh'], target, "000111",(50,1,0.01,0.9))
     
     # Orientation RF and LF - Needed featureVector3 to get desired behaviour
     featureVecRH = FeatureVector3("featureVecRH")
@@ -131,32 +116,31 @@ def createTasks(robot,TwoHandTool):
     plug(robot.dynamic.signal('Jrh'),featureVecRH.signal('Jq'))
     featureVecRH.vector.value = array([1.,0.,0.])
     featureVecRH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([1.,0.,0.]))
-    taskRH.task.add(featureVecRH.name)
+    robot.mTasks['rh'].task.add(featureVecRH.name)
     
     featureVecLH = FeatureVector3("featureVecLH")
     plug(robot.dynamic.signal('lh'),featureVecLH.signal('position'))
     plug(robot.dynamic.signal('Jlh'),featureVecLH.signal('Jq'))
     featureVecLH.vector.value = array([1.,0.,0.])
     featureVecLH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
-    taskLH.task.add(featureVecLH.name)
+    robot.mTasks['lh'].task.add(featureVecLH.name)
     
-    gotoNd(taskChest,(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
-    taskChest.task.errorTimeDerivative.value = [0., 0., 0.]
+    gotoNd(robot.mTasks['chest'],(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
+    robot.mTasks['chest'].task.errorTimeDerivative.value = [0., 0., 0.]
     
-    gotoNd(taskWaist,(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
-    taskWaist.task.errorTimeDerivative.value = [0., 0., 0.]
+    gotoNd(robot.mTasks['waist'],(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
+    robot.mTasks['waist'].task.errorTimeDerivative.value = [0., 0., 0.]
     
     
-    tasks = array([taskRH.task, taskLH.task, taskWaist.task, taskChest.task, taskHeight])
-    
-    return tasks
+    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task, robot.mTasks['waist'].task, robot.mTasks['chest'].task, robot.taskHeight])
 
 
+    # sot loading
 
-def move(solver, tasks):
-    
     solver.sot.damping.value = 0.001
 
-    for i in range(size(tasks)):
+    removeUndesiredTasks(solver)
+
+    for i in range(len(tasks)):
         solver.push(tasks[i])
 

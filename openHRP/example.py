@@ -33,30 +33,22 @@ from dynamic_graph.sot.dyninv import *
 
 from numpy import eye
 
+from dynamic_graph.sot.fmorsill.openHRP.move_2ht import removeUndesiredTasks
+
 def moveRightHandToTarget(robot,solver,target):
-
-	############################################################
-	### TASK DEFINITION ########################################
-	############################################################
-
-	# Task Right Hand
-	taskRH = MetaTaskDyn6d('rh', robot.dynamic, 'rh', 'right-wrist')
-	taskRH.feature.frame('desired')
-	taskRH.task.dt.value = robot.timeStep
-	taskRH.featureDes.velocity.value=(0,0,0,0,0,0)
-	handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.17)
-	taskRH.opmodif = matrixToTuple(handMgrip)
 
 	############################################################
 	# Reference and gain setting
 	############################################################
 
-	gotoNd(taskRH,target,'000111',(50,1,0.01,0.9))
+	gotoNd(robot.mTasks['rh'],target,'000111',(50,1,0.01,0.9))
 
 	############################################################
 	# Push
 	############################################################
+	
+	removeUndesiredTasks(solver)
 
-	solver.push(taskRH.task)
+	solver.push(robot.mTasks['rh'].task)
 
 

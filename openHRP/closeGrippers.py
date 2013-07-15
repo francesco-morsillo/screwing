@@ -1,9 +1,10 @@
 # ______________________________________________________________________________
 # ******************************************************************************
 #
-#    OPEN GRIPPERS
+#    CLOSE GRIPPERS
 #       Robot: HRP-2 N.14
-#       Tasks: Open the grippers completely
+#       Tasks: Close the grippers till the position
+#              defined in the half-sitting pose
 # 
 # ______________________________________________________________________________
 # ******************************************************************************  
@@ -42,8 +43,8 @@ def openGrippers(robot):
 
     # Pose definition
     pose = array(robot.halfSitting)
-    pose[28] = 0.75
-    pose[35] = 0.75
+    #pose[28] = 0.1
+    #pose[35] = 0.1
 
     # New taskPosture creation
     robot.mTasks['posture'].ref = vectorToTuple(pose)

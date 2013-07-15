@@ -10,19 +10,19 @@
 
 """
 Already loaded on the python interpreter:
-	- robot with dynamics and control
-	- solver to produce the control
-	- dynamic graph
+    - robot with dynamics and control
+    - solver to produce the control
+    - dynamic graph
 
 The needed part is strictly the task definition and the push in the stack of tasks.
 
 This script is thought to be used after having initialized the solver with the
 function 'initialize' from sot.application.acceleration.precomputed_tasks. This
 script creates and loads the following tasks:
-       - Left foot and right foot (as a constraint, not as a task)
-       - COM for balance
-       - TaskLim to respect joint limits
-       - TaskPosture to keep the half-sitting posture as the aim for the unused DOF
+     - Left foot and right foot (as a constraint, not as a task)
+     - COM for balance
+     - TaskLim to respect joint limits
+     - TaskPosture to keep the half-sitting posture as the aim for the unused DOF
 
 """
 
@@ -34,66 +34,78 @@ from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import gotoNd
 from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, gotoNdRel
 
-from numpy import *
+from numpy import eye, array, dot
 
 
 
 #-----------------------------------------------------------------------------
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
-def createTasks(robot, displacementMatrix):
 
-	taskWaist = MetaTaskDyn6d('taskWaist', robot.dynamic, 'waist', 'waist')
-	taskRH    = MetaTaskDyn6d('rh', robot.dynamic, 'rh', 'right-wrist')
-	taskLH    = MetaTaskDyn6d('lh', robot.dynamic, 'lh', 'left-wrist')
-	taskRel = MetaTaskDyn6dRel('rel',robot.dynamic,'rh','lh','right-wrist','left-wrist')
+def createRelativeTask(robot):
 
-	for task in [ taskWaist, taskRH, taskLH, taskRel]:
-	    task.feature.frame('current')
-	    task.gain.setConstant(10)
-	    task.task.dt.value = robot.timeStep
-	    task.featureDes.velocity.value=(0,0,0,0,0,0)
+    robot.mTasks['rel'] = MetaTaskDyn6dRel('rel',robot.dynamic,'rh','lh','right-wrist','left-wrist')
 
-	handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.14)
-	taskRH.opmodif = matrixToTuple(handMgrip)
-	taskLH.opmodif = matrixToTuple(handMgrip)
+    robot.mTasks['rel'].feature.frame('current')
+    robot.mTasks['rel'].gain.setConstant(10)
+    robot.mTasks['rel'].task.dt.value = robot.timeStep
+    robot.mTasks['rel'].featureDes.velocity.value=(0,0,0,0,0,0)
 
-	# RELATIVE POSITION TASK
-	taskRel.opmodif = matrixToTuple(handMgrip)
-	taskRel.opmodifBase = matrixToTuple(handMgrip)
+    # RELATIVE POSITION TASK
+    handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.14)
+    robot.mTasks['rel'].opmodif = matrixToTuple(handMgrip)
+    robot.mTasks['rel'].opmodifBase = matrixToTuple(handMgrip)
 
 
-	# Set the targets. Selec is the activation flag (say control only
-# the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
-# far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
-# value is reached
-	taskRH.feature.position.recompute(robot.device.control.time)
-	taskLH.feature.position.recompute(robot.device.control.time)
-	targetLH = vectorToTuple(array(matrixToRPY( dot(displacementMatrix,array(taskLH.feature.position.value)) )))
-	gotoNd(taskLH, targetLH, "111111",(50,1,0.01,0.9))
+def removeUndesiredTasks(solver):
 
-	gotoNdRel(taskRel,taskRH.feature.position.value,taskLH.feature.position.value,'110111',(50,1,0.01,0.9))
-	taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
+    to_keep = [ 'taskLim', 'taskcontact_lleg', 'taskcontact_rleg', 'taskcom', 'taskposture']
 
-	#Task Waist
-	featureWaist = FeaturePoint6d('featureWaist')
+    for taskname in solver.toList():
+        if not taskname in to_keep:
+            solver.sot.rm(taskname)
+
+
+
+def move_2ht(robot, solver, displacementMatrix):
+
+    if 'rel' not in robot.mTasks: createRelativeTask(robot)
+
+    # Set the targets. Selec is the activation flag (say control only
+    # the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
+    # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
+    # value is reached
+    robot.mTasks['rh'].feature.position.recompute(robot.device.control.time)
+    robot.mTasks['lh'].feature.position.recompute(robot.device.control.time)
+    targetLH = vectorToTuple(array(matrixToRPY( dot(displacementMatrix,array(robot.mTasks['lh'].feature.position.value)) )))
+    gotoNd(robot.mTasks['lh'], targetLH, "111111",(50,1,0.01,0.9))
+    
+    gotoNdRel(robot.mTasks['rel'],robot.mTasks['rh'].feature.position.value,robot.mTasks['lh'].feature.position.value,'110111',(50,1,0.01,0.9))
+    robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
+    
+    #Task Waist
+    if 'taskWaistIne' not in robot.tasksIne :
+        featureWaist = FeaturePoint6d('featureWaist')
 	plug(robot.dynamic.waist,featureWaist.position)
 	plug(robot.dynamic.Jwaist,featureWaist.Jq)
-	taskWaist=TaskDynInequality('taskWaist')
-	plug(robot.dynamic.velocity,taskWaist.qdot)
-	taskWaist.add(featureWaist.name)
-	taskWaist.selec.value = '110000'
-	taskWaist.referenceInf.value = (0.,0.,0.,0.,-0.1,-0.7)    # Roll Pitch Yaw min
-	taskWaist.referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
-	taskWaist.dt.value=robot.timeStep
-	taskWaist.controlGain.value = 10
+	robot.tasksIne['taskWaistIne']=TaskDynInequality('taskWaistIne')
+	plug(robot.dynamic.velocity,robot.tasksIne['taskWaistIne'].qdot)
+	robot.tasksIne['taskWaistIne'].add(featureWaist.name)
+	
+    robot.tasksIne['taskWaistIne'].selec.value = '110000'
+    robot.tasksIne['taskWaistIne'].referenceInf.value = (0.,0.,0.,0.,-0.1,-0.7)    # Roll Pitch Yaw min
+    robot.tasksIne['taskWaistIne'].referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
+    robot.tasksIne['taskWaistIne'].dt.value=robot.timeStep
+    robot.tasksIne['taskWaistIne'].controlGain.value = 10
+    
+    tasks = array([robot.mTasks['rel'].task,robot.mTasks['lh'].task,robot.tasksIne['taskWaistIne']])
 
-	tasks = array([taskRel.task,taskLH.task,taskWaist])
 
-	return tasks
+    # sot charging
+    removeUndesiredTasks(solver)
+	
+    for i in range(len(tasks)):
+        solver.push(tasks[i])
 
 
-def move(solver, tasks):
 
-	for i in range(size(tasks)):
-		solver.push(tasks[i])

@@ -133,7 +133,7 @@ taskLim.controlGain.value = 1
 
 sot = SolverKine('sot')
 
-sot.setSecondOrderKine(True)
+sot.setSecondOrderKinematics()
 plug(dyn.velocity,sot.velocity)
 
 sot.setSize(robotDim)

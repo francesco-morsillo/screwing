@@ -1,9 +1,9 @@
 # ______________________________________________________________________________
 # ******************************************************************************
 #
-#    BASIC EXAMPLE OF THE DYNAMIC SOT
+#    SCREWING EXAMPLE
 #       Robot: HRP-2 N.14
-#       Tasks: Rotate the head and move the arms
+#       Tasks: Simulation of a sequence of points screwing
 # 
 # ______________________________________________________________________________
 # ******************************************************************************  
@@ -23,6 +23,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, r
 from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
 from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, gotoNdRel, goto6dRel
+from dynamic_graph.sot.core.feature_vector3 import *
 
 from dynamic_graph.sot.fmorsill.utility import *
 from dynamic_graph.sot.fmorsill.rob_view_lib import *
@@ -88,10 +89,10 @@ refToTwoHandToolMatrix = dot( RTMatrix , array(RPYToMatrix((xTool,yTool,zTool,ro
 
 
 #goals
-goal3 = array([0.55,-0.2,0.9,0.,1.57,0.])
-goal4 = array([0.55,-0.3,0.9,0.,1.57,0.])
-goal1 = array([0.55,-0.3,1.,0.,1.57,0.])
-goal2 = array([0.55,-0.2,1.,0.,1.57,0.])
+goal3 = array([0.5,-0.2,0.9,0.,1.57,0.])
+goal4 = array([0.5,-0.3,0.9,0.,1.57,0.])
+goal1 = array([0.5,-0.3,1.,0.,1.57,0.])
+goal2 = array([0.5,-0.2,1.,0.,1.57,0.])
 
 goal = array([goal1,goal2,goal3,goal4])
 
@@ -183,7 +184,7 @@ sot = SolverKine('sot')
 
 sot.setSize(robotDim)
 
-sot.setSecondOrderKine(True)
+sot.setSecondOrderKinematics()
 plug(dyn.velocity,sot.velocity)
 
 plug(sot.control, robot.control)
@@ -244,8 +245,15 @@ RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 # TASK Screw
 taskScrew=MetaTaskDyn6d('screw',dyn,'screw','right-wrist'); taskScrew.opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
 taskScrew.featureDes.velocity.value=(0,0,0,0,0,0)
-taskScrew.feature.selec.value = '011111'
+taskScrew.feature.selec.value = '000111'
 taskScrew.gain.setByPoint(100,1,0.01,0.9)
+
+# TASK Screw orientation
+featureVecScrew = FeatureVector3("featureVecScrew")
+plug(dyn.signal('rh'),featureVecScrew.signal('position'))
+plug(dyn.signal('Jrh'),featureVecScrew.signal('Jq'))
+featureVecScrew.vector.value = array([0.,0.,-1.])
+taskScrew.task.add(featureVecScrew.name)
 
 # Task Relative
 gotoNdRel(taskRel,array(taskRH.feature.position.value),array(taskLH.feature.position.value),'110111',500)
@@ -348,6 +356,7 @@ def go_to(goal,pos_err_des,screw_len):
 		
 		# Aim setting
 		taskScrew.ref = matrixToTuple(action[i])
+		featureVecScrew.positionRef.value = dot(action[i,0:3,0:3],array([0.,0.,1.]))
 		do()
 		while linalg.norm(array(taskScrew.feature.error.value)[0:3]) > desired_error[i]:
 			do()
