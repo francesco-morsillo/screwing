@@ -204,13 +204,34 @@ dyn.com.recompute(0)
 taskCom.featureDes.errorIN.value = dyn.com.value
 taskCom.task.controlGain.value = 10
 
-target = (0.6,-0.2,1.1)
+target = (0.4,0.,0.7)
 robot.viewer.updateElementConfig('zmp',target+(0,0,0))
 gotoNd(taskRH, target, "000111")
 
 taskPosture.ref = initialConfig[robotName]
 taskPosture.gain.setConstant(10)
 
+
+
+from dynamic_graph.sot.core.feature_point6d_relative import *
+frel = FeaturePoint6dRelative('frel')
+taskLH = MetaTaskDyn6d('lh',dyn,'lh','left-wrist')
+plug(dyn.signal('rh'),frel.position)
+plug(dyn.signal('lh'),frel.positionRef)
+plug(dyn.signal('Jlh'),frel.JqRef)
+plug(dyn.signal('Jrh'),frel.Jq)
+taskRH.task.add(frel.name)
+frel.selec.value = '111111'
+frel.frame = 'desired'
+
+taskRH.feature.position.recompute(0)
+taskLH.feature.position.recompute(0)
+
+frelRef = FeaturePoint6dRelative('frelRef')
+frelRef.position.value = dyn.signal('rh').value
+frelRef.positionRef.value = dyn.signal('lh').value
+
+frel.setReference(frelRef.name)
 
 
 sot.clear()

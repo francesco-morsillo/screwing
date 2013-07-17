@@ -333,4 +333,23 @@ while linalg.norm(array(taskRH.feature.error.value)[0:3]) > pos_err_des:
 print "pos_err= "+str(linalg.norm(array(taskRH.feature.error.value)[0:3]))
 """
 
+"""
+from dynamic_graph.sot.core.math_small_entities import HomoToRotation, Multiply_matrix_vector
 
+# Production of variable reference vector
+HToR = HomoToRotation("HToR")
+plug(taskLH.feature.position,HToR.sin)
+
+RxV = Multiply_matrix_vector("RxV")
+plug(HToR.sout,RxV.sin1)
+RxV.sin2.value = array([-1.,0.,0.])
+
+# Orientation RF
+featureVecRH = FeatureVector3("featureVecRH")
+plug(dyn.signal('rh'),featureVecRH.signal('position'))
+plug(dyn.signal('Jrh'),featureVecRH.signal('Jq'))
+featureVecRH.vector.value = array([1.,0.,0.])
+#plug(RxV.sout,featureVecRH.positionRef)
+featureVecRH.positionRef.value = array([1.,0.,0.])
+taskRH.task.add(featureVecRH.name)
+"""
