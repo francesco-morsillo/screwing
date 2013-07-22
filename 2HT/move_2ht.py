@@ -237,7 +237,11 @@ taskLH.feature.position.recompute(0)
 targetRH = vectorToTuple(array(matrixToRPY( dot(displacementMatrix,array(taskRH.feature.position.value)) )))
 gotoNd(taskRH, targetRH, "111111",(50,1,0.01,0.9))
 
-gotoNdRel(taskRel,taskRH.feature.position.value,taskLH.feature.position.value,'000111',(50,1,0.01,0.9))
+RHPos = taskRH.feature.position.value
+LHPos = taskLH.feature.position.value
+#3RHPos = vectorToTuple(array(taskRH.feature.position.value)[0:3,3])
+#LHPos = vectorToTuple(array(taskLH.feature.position.value)[0:3,3])
+gotoNdRel(taskRel,RHPos,LHPos,'110111',(50,1,0.01,0.9))
 taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
 
@@ -250,6 +254,14 @@ plug(taskLH.feature.position,HToR.sin)
 RxV = Multiply_matrix_vector("RxV")
 plug(HToR.sout,RxV.sin1)
 RxV.sin2.value = array([-1.,0.,0.])
+
+# Orientation RF
+featureVecRel = FeatureVector3("featureVecRel")
+plug(dyn.signal('rh'),featureVecRel.signal('position'))
+plug(dyn.signal('Jrh'),featureVecRel.signal('Jq'))
+featureVecRel.vector.value = array([1.,0.,0.])
+plug(RxV.sout,featureVecRel.positionRef)
+taskRH.task.add(featureVecRel.name)
 
 ############################################################
 

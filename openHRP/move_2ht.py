@@ -42,6 +42,9 @@ from numpy import eye, array, dot
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
+displacement = eye(4)
+displacement[0:3,3] = array([0.1,0.,0.])
+
 def createRelativeTask(robot):
 
     robot.mTasks['rel'] = MetaTaskDyn6dRel('rel',robot.dynamic,'rh','lh','right-wrist','left-wrist')

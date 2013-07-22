@@ -24,6 +24,7 @@ from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
 from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, gotoNdRel, goto6dRel
 from dynamic_graph.sot.core.feature_vector3 import *
+from dynamic_graph.sot.core.math_small_entities import HomoToRotation, Multiply_matrix_vector
 
 from dynamic_graph.sot.fmorsill.utility import *
 from dynamic_graph.sot.fmorsill.rob_view_lib import *
@@ -258,6 +259,26 @@ taskScrew.task.add(featureVecScrew.name)
 # Task Relative
 gotoNdRel(taskRel,array(taskRH.feature.position.value),array(taskLH.feature.position.value),'110111',500)
 taskRel.feature.errordot.value=(0,0,0,0,0)	# not to forget!!
+
+############################################################
+
+# Production of variable reference vector
+HToR = HomoToRotation("HToR")
+plug(taskLH.feature.position,HToR.sin)
+
+RxV = Multiply_matrix_vector("RxV")
+plug(HToR.sout,RxV.sin1)
+RxV.sin2.value = array([-1.,0.,0.])
+
+# Orientation RF
+featureVecRel = FeatureVector3("featureVecRel")
+plug(dyn.signal('rh'),featureVecRel.signal('position'))
+plug(dyn.signal('Jrh'),featureVecRel.signal('Jq'))
+featureVecRel.vector.value = array([1.,0.,0.])
+plug(RxV.sout,featureVecRel.positionRef)
+taskRH.task.add(featureVecRel.name)
+
+###########################################################
 
 # Task Posture
 taskPosture = MetaTaskDynPosture(dyn,dt)

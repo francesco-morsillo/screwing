@@ -39,7 +39,7 @@ from numpy import array
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
-def openGrippers(robot):
+def closeGrippers(robot):
 
     # Pose definition
     pose = array(robot.halfSitting)
