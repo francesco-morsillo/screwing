@@ -90,10 +90,10 @@ refToTwoHandToolMatrix = dot( RTMatrix , array(RPYToMatrix((xTool,yTool,zTool,ro
 
 
 #goals
-goal3 = array([0.5,-0.2,0.9,0.,1.57,0.])
-goal4 = array([0.5,-0.3,0.9,0.,1.57,0.])
-goal1 = array([0.5,-0.3,1.,0.,1.57,0.])
-goal2 = array([0.5,-0.2,1.,0.,1.57,0.])
+goal3 = array([0.5,-0.1,0.7,0.,1.57,0.])
+goal4 = array([0.5,-0.5,0.7,0.,1.57,0.])
+goal1 = array([0.5,-0.5,1.2,0.,1.57,0.])
+goal2 = array([0.5,-0.1,1.1,0.,1.57,0.])
 
 goal = array([goal1,goal2,goal3,goal4])
 
@@ -345,18 +345,18 @@ sot.push(taskPosture.task.name)
 sot.damping.value = 0.1
 
 # Motion recording
-zmp_out = open("/tmp/data.zmp","w")
-hip_out = open("/tmp/data.hip","w")
-pos_out = open("/tmp/data.pos","w")
+#zmp_out = open("/tmp/data.zmp","w")
+#hip_out = open("/tmp/data.hip","w")
+#pos_out = open("/tmp/data.pos","w")
 
 def do():
 	robot.increment(dt)
 	attime.run(robot.control.time)
 	updateComDisplay(robot,dyn.com)
 	updateToolDisplay(taskScrew,linalg.inv(TwoHandToolToScrewMatrix),robot)
-	record_zmp(robot,dyn,zmp_out,dt)
-	record_hip(robot,dyn,hip_out,dt)
-	record_pos(robot,dyn,pos_out,dt)
+	#record_zmp(robot,dyn,zmp_out,dt)
+	#record_hip(robot,dyn,hip_out,dt)
+	#record_pos(robot,dyn,pos_out,dt)
 
 def go_to(goal,pos_err_des,screw_len):
 

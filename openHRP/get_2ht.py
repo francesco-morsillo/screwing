@@ -90,18 +90,6 @@ def get_2ht(robot,solver,TwoHandTool):
 
     # ---- TASKS DEFINITION -------------------------------------------------------------------
     
-    # Task Inequality
-    featureHeight = FeatureGeneric('featureHeight')
-    plug(robot.dynamic.com,featureHeight.errorIN)
-    plug(robot.dynamic.Jcom,featureHeight.jacobianIN)
-    robot.taskHeight=TaskDynInequality('taskHeight')
-    plug(robot.dynamic.velocity,robot.taskHeight.qdot)
-    robot.taskHeight.add(featureHeight.name)
-    robot.taskHeight.selec.value = '100'
-    robot.taskHeight.referenceInf.value = (0.,0.,0.)    # Xmin, Ymin
-    robot.taskHeight.referenceSup.value = (0.,0.,0.83)  # Xmax, Ymax
-    robot.taskHeight.dt.value=robot.timeStep
-
     # Set the targets. Selec is the activation flag (say control only
     # the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
@@ -134,7 +122,7 @@ def get_2ht(robot,solver,TwoHandTool):
     robot.mTasks['waist'].task.errorTimeDerivative.value = [0., 0., 0.]
     
     
-    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task, robot.mTasks['waist'].task, robot.mTasks['chest'].task, robot.taskHeight])
+    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task, robot.mTasks['waist'].task, robot.mTasks['chest'].task, robot.tasksIne['taskHeight']])
 
 
     # sot loading

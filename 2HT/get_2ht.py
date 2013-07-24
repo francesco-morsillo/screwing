@@ -90,7 +90,7 @@ robot.control.unplug()
 
 
 # TwoHandTool
-xd = 0.8
+xd = 1.0
 yd = -0.13
 zd = 0.9
 roll = 0.
@@ -313,7 +313,7 @@ taskWaist.task.errorTimeDerivative.value = [0., 0., 0.]
 # Sot
 sot.clear()
 
-sot.damping.value = 1
+sot.damping.value = 0.01
 
 sot.addContact(contactLF)
 sot.addContact(contactRF)
@@ -321,8 +321,8 @@ sot.push(taskLim.name)
 sot.push(taskCom.task.name)
 sot.push(taskRH.task.name)
 sot.push(taskLH.task.name)
-#sot.push(taskWaist.task.name)
-#sot.push(taskChest.task.name)
+sot.push(taskWaist.task.name)
+sot.push(taskChest.task.name)
 sot.push(taskHeight.name)
 sot.push(taskPosture.task.name)
 

@@ -9,65 +9,79 @@
 # ******************************************************************************  
 
 
-from dynamic_graph.sot.fmorsill.openHRP.screw_2ht import screw_2ht
 
-from numpy import array, linalg
+from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
+
+from dynamic_graph.sot.fmorsill.openHRP.screw_2ht import screw_2ht
+from dynamic_graph.sot.fmorsill.openHRP.get_2ht import get_2ht
+from dynamic_graph.sot.fmorsill.utility import *
+from numpy import array, linalg, pi
 
 
 pos_err_des = 0.00001
 
 def stuck(mTask):
-    if linalg.norm(array(mTask.feature.error.value)[0:3] - mTask.old_err) < pos_err_des:
+    #if linalg.norm(array(mTask.feature.error.value)[0:3] - mTask.old_err) < pos_err_des:
+    if math.isnan(mTask.feature.error.value[0]):
         res = True
     else: res = False
 
     mTask.old_err = array(mTask.feature.error.value)[0:3]
     return res
 
+def FSM(state):
 
-class TryF:
+    print "State: " + state
 
-    mTask_ = None
+    if state == 'tryF':
+        robot.mTasks['screw'].feature.error.recompute(robot.control.time)
+        if linalg.norm(array(robot.mTasks['screw'].feature.error.value)[0:3]) < pos_err_des:
+            print "Error: " + (robot.mTasks['screw'].feature.error.value)
+            print "\nSUCCESS \n"
+            state = 'success'
+            get_2ht(robot,solver,tool)
+            
+        elif stuck(robot.mTasks['screw']):
+            print "\nFAILURE \n"
+            state =  'failure'
+            get_2ht(robot,solver,tool)
+            
+                
+    if state == 'success':
+        robot.mTasks['lh'].feature.error.recompute(robot.control.time)
+        if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
+            print "Error: " + (robot.mTasks['lh'].feature.error.value)
+            print "\nTRY \n"
+            state = 'tryF'
+            screw_2ht(robot,solver,tool,goal)
+                        
+                        
+    if state == 'failure':
+        robot.mTasks['lh'].feature.error.recompute(robot.control.time)
+        if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
+            print "Error: " + (robot.mTasks['lh'].feature.error.value)
+            print "\nTRY \n"
+            state = 'tryF'
+            screw_2ht(robot,solver,tool,goal)
+
+
+
+def supervisor(robot, solver):
+
+    ### Start script
+    tool = (0.4,-0.1,0.9,0.,0.,pi/2)
+    get_2ht(robot,solver,tool)
+
+    goal = array([0.55,-0.2,0.9,0.,1.57,0.])
     
-    def __init__(self,mTask):
-        self.mTask_ = mTask
-        # need to initialize old_err for the failure case
-        # using zero assures that this value will never cause an immediate changing to the failure case, because if error is near to zero we fall in the success case
-        self.mTask_.old_err = array([0.,0.,0.])
-
-    # check if reached condition of state changing
-    def check_cond(self):        
-        # success check
-        print str(self)
-        self.mTask_.feature.error.recompute(0)
-        if linalg.norm(array(self.mTask_.feature.error.value)[0:3]) < pos_err_des:
-            print "\n\n SUCCESS \n"
-            return (True, 'success')
-        elif stuck(self.mTask_):
-            print "\n\n FAILURE \n"
-            return (True, 'failure')
-        else :
-            return (False, 'tryF')  #Unuseful return of tryF
+    state = 'success' #to initialize I need to go to get_2htt position
 
 
+    @loopInThread
+    def Runner():
+        FSM(state)
 
+    runner = Runner()
+    runner.play()
 
-class FSM:
-    state_ = ''
-    operator_ = dict()
-
-    def __init__(self,initial_state, mTask):
-        self.state_ = initial_state
-        self.mTask_ = mTask
-        self.operator_['try'] = TryF(self.mTask_)
-
-    def check_cond(self):
-        return  self.operator_[self.state_].check_cond()
-
-    def state_evaluation(self):
-        (res, new_state) = check_cond()
-        if res : self.state_ = new_state
-
-
-#def feasibility_try():
-    
+    return (runner,state)
