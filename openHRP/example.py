@@ -33,7 +33,7 @@ from dynamic_graph.sot.dyninv import *
 
 from numpy import eye
 
-from dynamic_graph.sot.fmorsill.openHRP.move_2ht import removeUndesiredTasks
+from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 
 def moveRightHandToTarget(robot,solver,target):
 

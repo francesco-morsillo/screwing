@@ -30,11 +30,11 @@ from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import gotoNdRel, MetaTaskDyn6dRel
 from dynamic_graph.sot.application.acceleration.precomputed_tasks import createBalanceAndPosture
 
-from dynamic_graph.sot.fmorsill.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
+from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
 
 from numpy import eye, array, dot, linalg
 
-from dynamic_graph.sot.fmorsill.openHRP.move_2ht import createRelativeTask, removeUndesiredTasks
+from dynamic_graph.sot.screwing.openHRP.move_2ht import createRelativeTask, removeUndesiredTasks
 
 
 

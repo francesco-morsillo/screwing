@@ -24,8 +24,8 @@ from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
 from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, gotoNdRel, goto6dRel
 
-from dynamic_graph.sot.fmorsill.utility import *
-from dynamic_graph.sot.fmorsill.rob_view_lib import *
+from dynamic_graph.sot.screwing.utility import *
+from dynamic_graph.sot.screwing.rob_view_lib import *
 from dynamic_graph.sot.core.feature_vector3 import *
 
 from numpy import *

@@ -36,11 +36,11 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple, mat
 from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import gotoNd
 
-from dynamic_graph.sot.fmorsill.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix
+from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix
 
 from numpy import eye,array,dot,pi
 
-from dynamic_graph.sot.fmorsill.openHRP.move_2ht import removeUndesiredTasks
+from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 
 #-----------------------------------------------------------------------------
 # --- TRACER ------------------------------------------------------------------

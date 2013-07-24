@@ -12,9 +12,9 @@
 
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 
-from dynamic_graph.sot.fmorsill.openHRP.screw_2ht import screw_2ht
-from dynamic_graph.sot.fmorsill.openHRP.get_2ht import get_2ht
-from dynamic_graph.sot.fmorsill.utility import *
+from dynamic_graph.sot.screwing.openHRP.screw_2ht import screw_2ht
+from dynamic_graph.sot.screwing.openHRP.get_2ht import get_2ht
+from dynamic_graph.sot.screwing.utility import *
 from numpy import array, linalg, pi
 
 
@@ -54,8 +54,9 @@ def FSM(state):
             print "\nTRY \n"
             state = 'tryF'
             screw_2ht(robot,solver,tool,goal)
-                        
-                        
+
+
+
     if state == 'failure':
         robot.mTasks['lh'].feature.error.recompute(robot.control.time)
         if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
@@ -73,15 +74,17 @@ def supervisor(robot, solver):
     get_2ht(robot,solver,tool)
 
     goal = array([0.55,-0.2,0.9,0.,1.57,0.])
-    
+
     state = 'success' #to initialize I need to go to get_2htt position
 
-
-    @loopInThread
-    def Runner():
-        FSM(state)
-
-    runner = Runner()
-    runner.play()
-
     return (runner,state)
+
+"""
+@loopInThread
+def Runner():
+    FSM(state)
+
+runner = Runner()
+runner.play()
+"""
+

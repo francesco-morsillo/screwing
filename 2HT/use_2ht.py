@@ -26,8 +26,8 @@ from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import MetaTaskDyn6dRel, g
 from dynamic_graph.sot.core.feature_vector3 import *
 from dynamic_graph.sot.core.math_small_entities import HomoToRotation, Multiply_matrix_vector
 
-from dynamic_graph.sot.fmorsill.utility import *
-from dynamic_graph.sot.fmorsill.rob_view_lib import *
+from dynamic_graph.sot.screwing.utility import *
+from dynamic_graph.sot.screwing.rob_view_lib import *
 
 from numpy import *
 

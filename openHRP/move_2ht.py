@@ -81,11 +81,11 @@ def move_2ht(robot, solver, displacementMatrix):
     robot.mTasks['rh'].feature.position.recompute(robot.device.control.time)
     robot.mTasks['lh'].feature.position.recompute(robot.device.control.time)
     targetLH = vectorToTuple(array(matrixToRPY( dot(displacementMatrix,array(robot.mTasks['lh'].feature.position.value)) )))
-    gotoNd(robot.mTasks['lh'], targetLH, "111111",(50,1,0.01,0.9))
-    
+    gotoNd(robot.mTasks['lh'], targetLH, "111111",(50,1,0.01,0.9)
+
     gotoNdRel(robot.mTasks['rel'],robot.mTasks['rh'].feature.position.value,robot.mTasks['lh'].feature.position.value,'110111',(50,1,0.01,0.9))
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
-    
+
     #Task Waist
     if 'taskWaistIne' not in robot.tasksIne :
         featureWaist = FeaturePoint6d('featureWaist')
@@ -94,19 +94,19 @@ def move_2ht(robot, solver, displacementMatrix):
 	robot.tasksIne['taskWaistIne']=TaskDynInequality('taskWaistIne')
 	plug(robot.dynamic.velocity,robot.tasksIne['taskWaistIne'].qdot)
 	robot.tasksIne['taskWaistIne'].add(featureWaist.name)
-	
+
     robot.tasksIne['taskWaistIne'].selec.value = '110000'
     robot.tasksIne['taskWaistIne'].referenceInf.value = (0.,0.,0.,0.,-0.1,-0.7)    # Roll Pitch Yaw min
     robot.tasksIne['taskWaistIne'].referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
     robot.tasksIne['taskWaistIne'].dt.value=robot.timeStep
     robot.tasksIne['taskWaistIne'].controlGain.value = 10
-    
+
     tasks = array([robot.mTasks['rel'].task,robot.mTasks['lh'].task,robot.tasksIne['taskWaistIne']])
 
 
     # sot charging
     removeUndesiredTasks(solver)
-	
+
     for i in range(len(tasks)):
         solver.push(tasks[i])
 
