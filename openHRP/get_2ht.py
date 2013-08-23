@@ -65,7 +65,7 @@ def createTraces(robot):
 
 tool = (0.4,-0.1,0.9,0.,0.,pi/2)
 
-def get_2ht(robot,solver,TwoHandTool):
+def get_2ht(robot,solver,TwoHandTool,gainMax):
 
     # ---- STOOL PARAMETERS -------------------------------------------------------------------
     """
@@ -95,10 +95,10 @@ def get_2ht(robot,solver,TwoHandTool):
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
     # value is reached
     target = vectorToTuple(refToSupportMatrix[0:3,3])
-    gotoNd(robot.mTasks['rh'], target, "000111",(50,1,0.01,0.9))
+    gotoNd(robot.mTasks['rh'], target, "000111",(gainMax,gainMax/50,0.01,0.9))
     
     target = vectorToTuple(refToTriggerMatrix[0:3,3])
-    gotoNd(robot.mTasks['lh'], target, "000111",(50,1,0.01,0.9))
+    gotoNd(robot.mTasks['lh'], target, "000111",(gainMax,gainMax/50,0.01,0.9))
     
     # Orientation RF and LF - Needed featureVector3 to get desired behaviour
     featureVecRH = FeatureVector3("featureVecRH")

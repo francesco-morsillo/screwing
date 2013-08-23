@@ -14,7 +14,6 @@ from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 
 from dynamic_graph.sot.screwing.openHRP.screw_2ht import screw_2ht
 from dynamic_graph.sot.screwing.openHRP.get_2ht import get_2ht
-from dynamic_graph.sot.screwing.utility import *
 from numpy import array, linalg, pi
 
 
@@ -34,7 +33,7 @@ def FSM(state):
     print "State: " + state
 
     if state == 'tryF':
-        robot.mTasks['screw'].feature.error.recompute(robot.control.time)
+        robot.mTasks['screw'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['screw'].feature.error.value)[0:3]) < pos_err_des:
             print "Error: " + (robot.mTasks['screw'].feature.error.value)
             print "\nSUCCESS \n"
@@ -45,10 +44,10 @@ def FSM(state):
             print "\nFAILURE \n"
             state =  'failure'
             get_2ht(robot,solver,tool)
-            
-                
+
+    
     if state == 'success':
-        robot.mTasks['lh'].feature.error.recompute(robot.control.time)
+        robot.mTasks['lh'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
             print "Error: " + (robot.mTasks['lh'].feature.error.value)
             print "\nTRY \n"
@@ -58,7 +57,7 @@ def FSM(state):
 
 
     if state == 'failure':
-        robot.mTasks['lh'].feature.error.recompute(robot.control.time)
+        robot.mTasks['lh'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
             print "Error: " + (robot.mTasks['lh'].feature.error.value)
             print "\nTRY \n"
@@ -67,7 +66,7 @@ def FSM(state):
 
 
 
-def supervisor(robot, solver):
+def launch(robot, solver):
 
     ### Start script
     tool = (0.4,-0.1,0.9,0.,0.,pi/2)
@@ -75,9 +74,9 @@ def supervisor(robot, solver):
 
     goal = array([0.55,-0.2,0.9,0.,1.57,0.])
 
-    state = 'success' #to initialize I need to go to get_2htt position
+    state = 'success' #to initialize I need to go to get_2ht position
 
-    return (runner,state)
+    return (tool,goal,state)
 
 """
 @loopInThread

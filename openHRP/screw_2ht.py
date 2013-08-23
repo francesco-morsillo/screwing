@@ -40,7 +40,7 @@ from dynamic_graph.sot.screwing.openHRP.move_2ht import createRelativeTask, remo
 
 #goal = array([0.55,-0.2,0.9,0.,1.57,0.])
 
-def screw_2ht(robot,solver,TwoHandTool,goal):
+def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
 
@@ -67,7 +67,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal):
     robot.mTasks['screw'].opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
     robot.mTasks['screw'].featureDes.velocity.value=(0,0,0,0,0,0)
     robot.mTasks['screw'].feature.selec.value = '000111'
-    robot.mTasks['screw'].gain.setByPoint(100,1,0.01,0.9)
+    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMax/50,0.01,0.9)
 
     # TASK Screw orientation
     featureVecScrew = FeatureVector3("featureVecScrew")
@@ -77,7 +77,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal):
     robot.mTasks['screw'].task.add(featureVecScrew.name)
 
     # Task Relative
-    gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',500)
+    gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
 
@@ -113,7 +113,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal):
         robot.tasksIne['taskChestIne'].add(featureChest.name)
 
     robot.tasksIne['taskChestIne'].selec.value = '110000'
-    robot.tasksIne['taskChestIne'].referenceInf.value = (0.,0.,0.,0.,-0.2,-0.7)    # Roll Pitch Yaw min
+    robot.tasksIne['taskChestIne'].referenceInf.value = (0.,0.,0.,0.,0.,-0.7)    # Roll Pitch Yaw min
     robot.tasksIne['taskChestIne'].referenceSup.value = (0.,0.,0.,0.,0.3,0.7)  # Roll Pitch Yaw max
     robot.tasksIne['taskChestIne'].dt.value=robot.timeStep
     robot.tasksIne['taskChestIne'].controlGain.value = 10

@@ -74,6 +74,7 @@ def move_2ht(robot, solver, displacementMatrix):
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
 
+
     # Set the targets. Selec is the activation flag (say control only
     # the XYZ translation), and gain is the adaptive gain (<arg1> at the target, <arg2>
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
@@ -81,7 +82,7 @@ def move_2ht(robot, solver, displacementMatrix):
     robot.mTasks['rh'].feature.position.recompute(robot.device.control.time)
     robot.mTasks['lh'].feature.position.recompute(robot.device.control.time)
     targetLH = vectorToTuple(array(matrixToRPY( dot(displacementMatrix,array(robot.mTasks['lh'].feature.position.value)) )))
-    gotoNd(robot.mTasks['lh'], targetLH, "111111",(50,1,0.01,0.9)
+    gotoNd(robot.mTasks['lh'], targetLH, "111111",(50,1,0.01,0.9))
 
     gotoNdRel(robot.mTasks['rel'],robot.mTasks['rh'].feature.position.value,robot.mTasks['lh'].feature.position.value,'110111',(50,1,0.01,0.9))
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!

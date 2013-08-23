@@ -42,9 +42,9 @@ def openGrippers(robot):
 
     # Pose definition
     pose = array(robot.halfSitting)
-    pose[28] = 0.75
-    pose[35] = 0.75
+    pose[28] = 0.74
+    pose[35] = 0.74
 
     # New taskPosture creation
     robot.mTasks['posture'].ref = vectorToTuple(pose)
-    robot.mTasks['posture'].gain.setConstant = 10
+    robot.mTasks['posture'].gain.setConstant(10)

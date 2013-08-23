@@ -1,10 +1,9 @@
 # ______________________________________________________________________________
 # ******************************************************************************
 #
-#    CLOSE GRIPPERS
+#    GO TO HALF SITTING POSITION
 #       Robot: HRP-2 N.14
-#       Tasks: Close the grippers till the position
-#              defined in the half-sitting pose
+#       Tasks: Go in the half-sitting pose
 # 
 # ______________________________________________________________________________
 # ******************************************************************************  
@@ -34,17 +33,19 @@ from dynamic_graph.sot.core.matrix_util import vectorToTuple
 
 from numpy import array
 
+from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 
 #-----------------------------------------------------------------------------
 # --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
 #-----------------------------------------------------------------------------
 
-def closeGrippers(robot):
+def goToHalfSit(robot,solver):
+
+    # Remove Other Tasks
+    removeUndesiredTasks(solver)
 
     # Pose definition
     pose = array(robot.halfSitting)
-    #pose[28] = 0.1
-    #pose[35] = 0.1
 
     # New taskPosture creation
     robot.mTasks['posture'].ref = vectorToTuple(pose)

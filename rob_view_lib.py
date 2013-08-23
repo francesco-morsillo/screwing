@@ -1,6 +1,6 @@
 
 from numpy import*
-from dynamic_graph.sot.fmorsill.utility import *
+from dynamic_graph.sot.screwing.utility import *
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
 
 

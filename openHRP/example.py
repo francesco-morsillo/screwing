@@ -35,6 +35,28 @@ from numpy import eye
 
 from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 
+
+# --- TRACER -----------------------------------------------------------------
+from dynamic_graph.tracer import *
+
+def traceStuff(robot):
+	tr = Tracer('tr')
+	tr.open('/tmp/','','.dat')
+	tr.start()
+	robot.after.addSignal('tr.triger')
+	robot.after.addSignal(robot.taskLim.name+".normalizedPosition")
+
+	tr.add('robot.dynamic.com','com')
+	tr.add(robot.mTasks['rh'].task.name+'.error','erh')
+	tr.add(robot.taskLim.name+".normalizedPosition","qn")
+	tr.add("robot.device.state","q")
+	tr.add("robot.device.control","qdot")
+	
+
+
+
+
+
 def moveRightHandToTarget(robot,solver,target):
 
 	############################################################
