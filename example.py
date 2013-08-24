@@ -38,7 +38,7 @@ robot.resize(robotDim)
 dt=5e-3
 
 from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
-x0=-0.00949035111398315034
+x0=0
 y0=0
 z0=0.64870185118253043
 halfSittingConfig[robotName] = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
@@ -172,6 +172,13 @@ tr.add(taskJL.name+".normalizedPosition","qn")
 robot.after.addSignal(taskJL.name+".normalizedPosition")
 tr.add(taskRH.task.name+'.error','erh')
 
+tr.add("dyn.position","q")
+robot.after.addSignal("dyn.position")
+tr.add("dyn.velocity","dq")
+robot.after.addSignal("dyn.velocity")
+tr.add("dyn.acceleration","ddq")
+robot.after.addSignal("dyn.acceleration")
+
 # --- SHORTCUTS ----------------------------------------------------------------
 def push(task):
     '''Add a task at the least priority of the stack.'''
@@ -219,6 +226,7 @@ gotoNd(taskRH,target,'000111',(5,1,0.01,0.9))
 # Set up the stack solver.
 sot.addContact(contactLF)
 sot.addContact(contactRF)
+push(taskJL)
 push(taskRH)
 push(taskCom)
 
