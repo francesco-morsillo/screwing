@@ -179,7 +179,7 @@ contactLF.feature.errordot.value=(0,0,0,0,0,0)
 contactRF.feature.errordot.value=(0,0,0,0,0,0)
 
 
-
+"""
 #-----------------------------------------------------------------------------
 # --- TRACER ------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -192,26 +192,52 @@ robot.after.addSignal('tr.triger')
 tr.add('dyn.com','com2')
 tr.add(taskRH.task.name+'.error','erh2')
 
-#history = History(dyn,1)
+tr.add(taskLim.name+".normalizedPosition","qn")
+robot.after.addSignal(taskLim.name+".normalizedPosition")
 
+tr.add("dyn.position","q")
+robot.after.addSignal("dyn.position")
+tr.add("dyn.velocity","dq")
+robot.after.addSignal("dyn.velocity")
+tr.add("dyn.acceleration","ddq")
+robot.after.addSignal("dyn.acceleration")
+"""
 
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-
+# COM metaTask
 dyn.com.recompute(0)
 taskCom.featureDes.errorIN.value = dyn.com.value
 taskCom.task.controlGain.value = 10
 
-target = (0.4,0.,0.7)
+# RH metaTask
+target = (0.5,-0.2,1.3)
 robot.viewer.updateElementConfig('zmp',target+(0,0,0))
-gotoNd(taskRH, target, "000111")
+gotoNd(taskRH, target, "000111",(50,1,0.01,0.9))
 
+# Posture metaTask
 taskPosture.ref = initialConfig[robotName]
 taskPosture.gain.setConstant(10)
+#taskPosture.gotoq((5,1,0.05,0.9),rhand=[1,]) #rarm=list(initialConfig[robotName][22:28]))
 
 
+sot.clear()
+sot.addContact(contactLF)
+sot.addContact(contactRF)
+
+sot.push(taskLim.name)
+sot.push(taskCom.task.name)
+sot.push(taskRH.task.name)
+#sot.push(taskPosture.task.name)
+
+
+
+"""
+rarmDes = initialConfig[robotName][22:28]
+larmDes = initialConfig[robotName][29:35]
+taskPosture.gotoq(10) #rarm=rarmDes,larm=larmDes)
 
 from dynamic_graph.sot.core.feature_point6d_relative import *
 frel = FeaturePoint6dRelative('frel')
@@ -232,19 +258,4 @@ frelRef.position.value = dyn.signal('rh').value
 frelRef.positionRef.value = dyn.signal('lh').value
 
 frel.setReference(frelRef.name)
-
-
-sot.clear()
-sot.addContact(contactLF)
-sot.addContact(contactRF)
-
-sot.push(taskLim.name)
-
-sot.push(taskCom.task.name)
-
-sot.push(taskRH.task.name)
-
-sot.push(taskPosture.task.name)
-
-
-
+"""
