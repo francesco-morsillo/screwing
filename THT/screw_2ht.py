@@ -16,14 +16,24 @@ from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPing
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 from dynamic_graph.sot.core.utils.attime import attime
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
-from dynamic_graph.sot.core.feature_vector3 import *
 
 from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMatrix,TwoHandToolToTriggerMatrix
-from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
-
-from dynamic_graph.sot.screwing.functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
 
 from dynamic_graph.sot.screwing.rob_view_lib import *
+
+
+############################################################
+###   CHOICE OF FIRST OR SECOND ORDER
+############################################################
+#-------------------------------------------------------------------------
+# VELOCITY CONTROL
+from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
+from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+
+# ACCELERATION CONTROL
+#from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
+#from dynamic_graph.sot.screwing.functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+#-------------------------------------------------------------------------
 
 class Robot:
     device = None
@@ -149,7 +159,7 @@ def supervision():
     if state == 0:
         robot.mTasks['lh'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
-            openGrippers(robot)
+            openGrippers(robot,solver)
             #state = 1000  #needed if you want to make the robot wait
             state=1
             print "time = "+str(robot.device.control.time)
@@ -158,7 +168,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.002:
             robot.device.viewer.updateElementConfig('TwoHandTool',tool)
-            closeGrippers(robot)
+            closeGrippers(robot,solver)
             state += 1
             print "time = "+str(robot.device.control.time)
            
@@ -193,7 +203,7 @@ def supervision():
     if state == 8:
         robot.mTasks['lh'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['lh'].feature.error.value)[0:3]) < pos_err_des:
-            openGrippers(robot)
+            openGrippers(robot,solver)
             #state = 8000 #needed if you want to make the robot wait
             state = 9
             print "time = "+str(robot.device.control.time)
@@ -234,7 +244,7 @@ def supervision():
 tool = (0.35,-0.1,0.9,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.5,0.,0.,0.,0.))
 
-P72 = (0.8,-0.1,0.9,0.,0.,1.57)
+P72 = (0.7,0.,0.9,0.,0.,1.57)
 robot.device.viewer.updateElementConfig('P72',P72)
 
 limit1 = array(P72) + array([-0.23,-0.3,0.23,0.,1.57,-1.57])
@@ -247,14 +257,14 @@ goal2 = limit1 + 0.3*(limit4-limit1)
 goal3 = limit1 + 0.7*(limit4-limit1)
 goal4 = limit1 + 1.0*(limit4-limit1)
 
-goal = array([goal1,goal4])
+goal = array([goal1,goal2,goal3,goal4])
 
 robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal1))
 robot.device.viewer.updateElementConfig('goal2',vectorToTuple(goal2))
 robot.device.viewer.updateElementConfig('goal3',vectorToTuple(goal3))
 robot.device.viewer.updateElementConfig('goal4',vectorToTuple(goal4))
 
-gain = 50
+gain = 5
 
 # ------------------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------

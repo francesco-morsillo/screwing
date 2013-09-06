@@ -1,41 +1,25 @@
-# ______________________________________________________________________________
-# ******************************************************************************
-#
-#    GET USING-TOOL POSITION
-#       Robot: HRP-2 N.14
-#       Tasks: Reach the "using-tool position" from half-sitting position
-# 
-# ______________________________________________________________________________
-# ******************************************************************************  
-
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph import plug
 
-from dynamic_graph.sot.core.matrix_util import matrixToTuple, matrixToRPY, RPYToMatrix
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, matrixToRPY, RPYToMatrix, vectorToTuple
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 from dynamic_graph.sot.core.utils.attime import attime
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
-from dynamic_graph.sot.screwing.rob_view_lib import *
 
 
-############################################################
-###   CHOICE OF FIRST OR SECOND ORDER
-############################################################
-#-------------------------------------------------------------------------
-# VELOCITY CONTROL
+from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMatrix,TwoHandToolToTriggerMatrix
+from dynamic_graph.sot.screwing.rob_view_lib import updateToolDisplay
+from dynamic_graph.sot.core.feature_vector3 import *
+
+from numpy import array,pi,linalg,isnan
+
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
-from dynamic_graph.sot.screwing.vel_control_functions import get_2ht
-
-# ACCELERATION CONTROL
 #from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
-#from dynamic_graph.sot.screwing.functions import get_2ht
-#-------------------------------------------------------------------------
-
 
 
 
@@ -75,6 +59,7 @@ addRobotViewer(robot.device,small=True,verbose=False)
 
 robot.timeStep=5e-3
 
+
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -108,7 +93,6 @@ robot.device.control.unplug()
 # --- SOLVER ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# initialize in acceleration mode
 solver = initialize(robot)
 
 # ------------------------------------------------------------------------------
@@ -125,6 +109,7 @@ def loop():
     inc()
 runner=loop()
 
+
 # --- shortcuts -------------------------------------------------
 @optionalparentheses
 def go(): runner.play()
@@ -133,50 +118,7 @@ def stop(): runner.pause()
 @optionalparentheses
 def next(): inc()
 @optionalparentheses
-def iter():         print 'iter = ',robot.state.time
+def iter():         print 'iter = ',robot.device.state.time
 @optionalparentheses
 def status():       print runner.isPlay
 
-# ---- TWOHANDSTOOL PARAMETERS -------------------------------------------------------------------
-# ---- TWOHANDSTOOL PARAMETERS -------------------------------------------------------------------
-# ---- TWOHANDSTOOL PARAMETERS -------------------------------------------------------------------
-
-
-# TwoHandTool
-xd = 0.4
-yd = -0.13
-zd = 0.9
-roll = 0.
-#pitch = pi/5
-pitch = 0
-yaw = pi/2
-
-TwoHandTool = (xd,yd,zd,roll,pitch,yaw)
-robot.device.viewer.updateElementConfig('TwoHandTool',TwoHandTool)
-
-#-----------------------------------------------------------------------------
-# --- TRACER ------------------------------------------------------------------
-#-----------------------------------------------------------------------------
-"""
-from dynamic_graph.tracer import *
-tr = Tracer('tr')
-tr.open('/tmp/','dyn_','.dat')
-tr.start()
-robot.device.after.addSignal('tr.triger')
-
-tr.add('robot.device.state','qn')
-tr.add('robot.dynamic.com','com')
-
-robot.device.after.addSignal('tr.triger')
-robot.device.after.addSignal('robot.dynamic.com')
-robot.device.after.addSignal('robot.device.state')
-"""
-
-
-#-----------------------------------------------------------------------------
-# --- RUN --------------------------------------------------------------------
-#-----------------------------------------------------------------------------
-
-gainMax = 5
-
-get_2ht(robot,solver,TwoHandTool,gainMax)

@@ -1,9 +1,9 @@
 # ______________________________________________________________________________
 # ******************************************************************************
 #
-#    FUNCTIONS
+#    VELOCITY CONTROL FUNCTIONS
 #       Robot: HRP-2 N.14
-#       Tasks: Functions that allow some basic behaviors
+#       Tasks: Functions that allow some basic behaviors in velocity control
 # 
 # ______________________________________________________________________________
 # ****************************************************************************** 
@@ -17,12 +17,12 @@ Already loaded on the python interpreter:
 The needed part is strictly the task definition and the push in the stack of tasks.
 
 This script is thought to be used after having initialized the solver with the
-function 'initialize' from sot.application.acceleration.precomputed_tasks. This
-script creates and loads the following tasks:
+function 'initialize' from sot.application.velocity.precomputed_meta_tasks.
+This script creates and loads the following tasks:
        - Left foot and right foot (as a constraint, not as a task)
        - COM for balance
        - TaskLim to respect joint limits
-       - TaskPosture to keep the half-sitting posture as the aim for the unused DOF
+       
 
 """
 
@@ -32,14 +32,13 @@ from dynamic_graph.sot.core.matrix_util import vectorToTuple, matrixToTuple, mat
 from dynamic_graph.sot.core import FeatureGeneric, FeaturePoint6d
 from dynamic_graph.sot.core.feature_vector3 import *
 
-from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
-from dynamic_graph.sot.dyninv.meta_tasks_dyn import gotoNd
-from dynamic_graph.sot.dyninv import TaskDynInequality
-from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import gotoNdRel, MetaTaskDyn6dRel
+from dynamic_graph.sot.core.meta_tasks_kine import MetaTaskKine6d, MetaTaskKineCom
+from dynamic_graph.sot.core.meta_tasks import gotoNd
+from dynamic_graph.sot.dyninv import TaskInequality
+from dynamic_graph.sot.core.meta_tasks_kine_relative import gotoNdRel, MetaTaskKine6dRel
 
 from numpy import eye, array, dot, pi, linalg
 
-from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
 
 
@@ -71,16 +70,13 @@ def removeUndesiredTasks(solver):
 #              defined in the half-sitting pose
 # ________________________________________________________________________
 # ************************************************************************
-def closeGrippers(robot):
+def closeGrippers(robot,solver):
 
-    # Pose definition
-    pose = array(robot.halfSitting)
-    #pose[28] = 0.1
-    #pose[35] = 0.1
+    robot.mTasks['posture'].gotoq(2,rhand=[0.1,],lhand=[0.1,])
 
-    # New taskPosture creation
-    robot.mTasks['posture'].ref = vectorToTuple(pose)
-    robot.mTasks['posture'].gain.setConstant(10)
+    # Eventual taskPosture creation
+    if 'taskposture' not in solver.toList():
+        solver.push(robot.mTasks['posture'].task)
 
 
 # ________________________________________________________________________
@@ -91,18 +87,13 @@ def closeGrippers(robot):
 # ________________________________________________________________________
 # ************************************************************************
 
-def openGrippers(robot):
+def openGrippers(robot,solver):
 
-    # Pose definition
-    pose = array(robot.halfSitting)
-    pose[28] = 0.74
-    pose[35] = 0.74
+    robot.mTasks['posture'].gotoq(2,rhand=[0.74,],lhand=[0.74,])
 
-    # New taskPosture creation
-    robot.mTasks['posture'].ref = vectorToTuple(pose)
-    robot.mTasks['posture'].gain.setConstant(10)
-
-
+    # Eventual taskPosture creation
+    if 'taskposture' not in solver.toList():
+        solver.push(robot.mTasks['posture'].task)
 
 
 # ________________________________________________________________________
@@ -119,10 +110,14 @@ def goToHalfSit(robot,solver):
     # Pose definition
     pose = array(robot.halfSitting)
 
-    # New taskPosture creation
+    # Task posture reference
     robot.mTasks['posture'].ref = vectorToTuple(pose)
-    robot.mTasks['posture'].gain.setConstant(10)
+    robot.mTasks['posture'].gain.setConstant(2)
+    robot.mTasks['posture'].feature.selec.value='111111111111111111111111111111111111'
 
+    # Eventual taskPosture creation
+    if 'taskposture' not in solver.toList():
+        solver.push(robot.mTasks['posture'].task)
 
 
 # ________________________________________________________________________
@@ -179,10 +174,10 @@ def get_2ht(robot,solver,TwoHandTool,gainMax):
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
     # value is reached
     target = vectorToTuple(refToSupportMatrix[0:3,3])
-    gotoNd(robot.mTasks['rh'], target, "000111",(gainMax,gainMax/50,0.01,0.9))
+    gotoNd(robot.mTasks['rh'], target, "000111",(gainMax,gainMax/5,0.01,0.9))
     
     target = vectorToTuple(refToTriggerMatrix[0:3,3])
-    gotoNd(robot.mTasks['lh'], target, "000111",(gainMax,gainMax/50,0.01,0.9))
+    gotoNd(robot.mTasks['lh'], target, "000111",(gainMax,gainMax/5,0.01,0.9))
     
     # Orientation RF and LF - Needed featureVector3 to get desired behaviour
     featureVecRH = FeatureVector3("featureVecRH")
@@ -228,11 +223,11 @@ def get_2ht(robot,solver,TwoHandTool,gainMax):
 # ************************************************************************
 def createRelativeTask(robot):
 
-    robot.mTasks['rel'] = MetaTaskDyn6dRel('rel',robot.dynamic,'rh','lh','right-wrist','left-wrist')
+    robot.mTasks['rel'] = MetaTaskKine6dRel('rel',robot.dynamic,'rh','lh','right-wrist','left-wrist')
 
-    robot.mTasks['rel'].feature.frame('current')
+    robot.mTasks['rel'].feature.frame('desired')
     robot.mTasks['rel'].gain.setConstant(10)
-    robot.mTasks['rel'].task.dt.value = robot.timeStep
+    #robot.mTasks['rel'].task.dt.value = robot.timeStep
     robot.mTasks['rel'].featureDes.velocity.value=(0,0,0,0,0,0)
 
     # RELATIVE POSITION TASK
@@ -266,12 +261,12 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
     RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
     # TASK Screw
-    robot.mTasks['screw']=MetaTaskDyn6d('screw',robot.dynamic,'screw','right-wrist')
+    robot.mTasks['screw']=MetaTaskKine6d('screw',robot.dynamic,'screw','right-wrist')
     handMgrip = array( robot.mTasks['rh'].opmodif )
     robot.mTasks['screw'].opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
     robot.mTasks['screw'].featureDes.velocity.value=(0,0,0,0,0,0)
     robot.mTasks['screw'].feature.selec.value = '000111'
-    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMax/50,0.01,0.9)
+    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMax/5,0.01,0.9)
 
     # TASK Screw orientation
     featureVecScrew = FeatureVector3("featureVecScrew")
@@ -296,8 +291,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
         featureWaist = FeaturePoint6d('featureWaist')
         plug(robot.dynamic.waist,featureWaist.position)
         plug(robot.dynamic.Jwaist,featureWaist.Jq)
-        robot.tasksIne['taskWaistIne']=TaskDynInequality('taskWaistIne')
-        plug(robot.dynamic.velocity,robot.tasksIne['taskWaistIne'].qdot)
+        robot.tasksIne['taskWaistIne']=TaskInequality('taskWaistIne')
         robot.tasksIne['taskWaistIne'].add(featureWaist.name)
         
     robot.tasksIne['taskWaistIne'].selec.value = '110000'
@@ -312,8 +306,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
         featureChest = FeaturePoint6d('featureChest')
         plug(robot.dynamic.waist,featureChest.position)
         plug(robot.dynamic.Jwaist,featureChest.Jq)
-        robot.tasksIne['taskChestIne']=TaskDynInequality('taskChestIne')
-        plug(robot.dynamic.velocity,robot.tasksIne['taskChestIne'].qdot)
+        robot.tasksIne['taskChestIne']=TaskInequality('taskChestIne')
         robot.tasksIne['taskChestIne'].add(featureChest.name)
 
     robot.tasksIne['taskChestIne'].selec.value = '110000'
