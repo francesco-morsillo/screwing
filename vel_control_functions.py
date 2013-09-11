@@ -245,6 +245,7 @@ def createRelativeTask(robot):
 # ________________________________________________________________________
 # ************************************************************************
 def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
+    #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
 

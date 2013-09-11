@@ -71,7 +71,7 @@ def removeUndesiredTasks(solver):
 #              defined in the half-sitting pose
 # ________________________________________________________________________
 # ************************************************************************
-def closeGrippers(robot):
+def closeGrippers(robot,solver):
 
     # Pose definition
     pose = array(robot.halfSitting)
@@ -91,7 +91,7 @@ def closeGrippers(robot):
 # ________________________________________________________________________
 # ************************************************************************
 
-def openGrippers(robot):
+def openGrippers(robot,solver):
 
     # Pose definition
     pose = array(robot.halfSitting)

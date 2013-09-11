@@ -29,10 +29,14 @@ from dynamic_graph.sot.screwing.rob_view_lib import *
 # VELOCITY CONTROL
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+gain = 5
 
 # ACCELERATION CONTROL
-#from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
-#from dynamic_graph.sot.screwing.functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+"""
+from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
+from dynamic_graph.sot.screwing.acc_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+gain = 50
+"""
 #-------------------------------------------------------------------------
 
 class Robot:
@@ -166,7 +170,7 @@ def supervision():
 
     if state == 1:
         robot.device.state.recompute(robot.device.control.time)
-        if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.002:
+        if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
             robot.device.viewer.updateElementConfig('TwoHandTool',tool)
             closeGrippers(robot,solver)
             state += 1
@@ -174,7 +178,7 @@ def supervision():
            
     if state == 2:
         robot.device.state.recompute(robot.device.control.time)
-        if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.002:
+        if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
             print "Goal: " + str(goal[0])
             screw_2ht(robot,solver,tool,goal[0],gain)
             write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
@@ -263,8 +267,6 @@ robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal1))
 robot.device.viewer.updateElementConfig('goal2',vectorToTuple(goal2))
 robot.device.viewer.updateElementConfig('goal3',vectorToTuple(goal3))
 robot.device.viewer.updateElementConfig('goal4',vectorToTuple(goal4))
-
-gain = 5
 
 # ------------------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------
