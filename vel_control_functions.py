@@ -55,7 +55,7 @@ from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHa
 # ************************************************************************
 def removeUndesiredTasks(solver):
 
-    to_keep = [ 'taskLim', 'taskcontactLF', 'taskcontactRF', 'taskcom', 'taskposture']
+    to_keep = [ 'taskLim', 'taskcontactLF', 'taskcontactRF', 'taskcom']
 
     for taskname in solver.toList():
         if not taskname in to_keep:
@@ -111,9 +111,12 @@ def goToHalfSit(robot,solver):
     pose = array(robot.halfSitting)
 
     # Task posture reference
+    robot.mTasks['posture'].gotoq(2,pose,chest=[],head=[],rleg=[],lleg=[],rarm=[],larm=[],rhand=[],lhand=[])
+    """
     robot.mTasks['posture'].ref = vectorToTuple(pose)
     robot.mTasks['posture'].gain.setConstant(2)
     robot.mTasks['posture'].feature.selec.value='111111111111111111111111111111111111'
+    """
 
     # Eventual taskPosture creation
     if 'taskposture' not in solver.toList():
@@ -193,16 +196,10 @@ def get_2ht(robot,solver,TwoHandTool,gainMax):
     featureVecLH.vector.value = array([1.,0.,0.])
     featureVecLH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
     robot.mTasks['lh'].task.add(featureVecLH.name)
-    
-    gotoNd(robot.mTasks['chest'],(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
-    robot.mTasks['chest'].task.errorTimeDerivative.value = [0., 0., 0.]
-    
-    gotoNd(robot.mTasks['waist'],(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
-    robot.mTasks['waist'].task.errorTimeDerivative.value = [0., 0., 0.]
-    
-    
-    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task, robot.mTasks['waist'].task, robot.mTasks['chest'].task, robot.tasksIne['taskHeight']])
 
+    robot.mTasks['posture'].gotoq(2,array(robot.halfSitting),chest=[], rknee=[],lknee=[])
+
+    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task,robot.mTasks['posture'].task])
 
     # sot loading
 
@@ -281,40 +278,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
 
-
-
-    ######################################################################
-    ###------TASK INEQUALITY----------------------------------------------
-    ######################################################################
-
-    #Task Waist
-    if 'taskWaistIne' not in robot.tasksIne :
-        featureWaist = FeaturePoint6d('featureWaist')
-        plug(robot.dynamic.waist,featureWaist.position)
-        plug(robot.dynamic.Jwaist,featureWaist.Jq)
-        robot.tasksIne['taskWaistIne']=TaskInequality('taskWaistIne')
-        robot.tasksIne['taskWaistIne'].add(featureWaist.name)
-        
-    robot.tasksIne['taskWaistIne'].selec.value = '110000'
-    robot.tasksIne['taskWaistIne'].referenceInf.value = (0.,0.,0.,0.,-0.1,-0.7)    # Roll Pitch Yaw min
-    robot.tasksIne['taskWaistIne'].referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
-    robot.tasksIne['taskWaistIne'].dt.value=robot.timeStep
-    robot.tasksIne['taskWaistIne'].controlGain.value = 10
-    
-
-    #Task Chest
-    if 'taskChestIne' not in robot.tasksIne :
-        featureChest = FeaturePoint6d('featureChest')
-        plug(robot.dynamic.waist,featureChest.position)
-        plug(robot.dynamic.Jwaist,featureChest.Jq)
-        robot.tasksIne['taskChestIne']=TaskInequality('taskChestIne')
-        robot.tasksIne['taskChestIne'].add(featureChest.name)
-
-    robot.tasksIne['taskChestIne'].selec.value = '110000'
-    robot.tasksIne['taskChestIne'].referenceInf.value = (0.,0.,0.,0.,0.,-0.7)    # Roll Pitch Yaw min
-    robot.tasksIne['taskChestIne'].referenceSup.value = (0.,0.,0.,0.,0.3,0.7)  # Roll Pitch Yaw max
-    robot.tasksIne['taskChestIne'].dt.value=robot.timeStep
-    robot.tasksIne['taskChestIne'].controlGain.value = 10
+    robot.mTasks['posture'].gotoq(2,array(robot.halfSitting),chest=[], rknee=[],lknee=[])
 
 
     # Goal HM
@@ -324,8 +288,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
     robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
     featureVecScrew.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
 
-    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task,robot.tasksIne['taskWaistIne'],robot.tasksIne['taskChestIne']])
-
+    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task,robot.mTasks['posture'].task])
 
     # sot charging
     solver.sot.damping.value = 0.001

@@ -11,15 +11,14 @@ from dynamic_graph.sot.core.utils.attime import attime
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
 
-
 from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMatrix,TwoHandToolToTriggerMatrix
 from dynamic_graph.sot.screwing.rob_view_lib import updateToolDisplay
 from dynamic_graph.sot.core.feature_vector3 import *
 
-from numpy import array,pi,linalg,isnan
+from numpy import array,pi,linalg
 
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
-#from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
+#from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 
 
 
@@ -51,7 +50,8 @@ x0=0.
 y0=0.
 z0=0.64870185118253043
 robot.halfSitting = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
-pose = robot.halfSitting
+#pose = robot.halfSitting
+pose = (x0,y0,z0,0,0,0)+initialConfig[robotName][6:]
 
 robot.device.set( pose )
 
