@@ -102,7 +102,7 @@ def openGrippers(robot,solver):
 #       Tasks: Go to the half-sitting pose
 # ________________________________________________________________________
 # ************************************************************************
-def goToHalfSit(robot,solver):
+def goToHalfSitting(robot,solver):
 
     # Remove Other Tasks
     removeUndesiredTasks(solver)

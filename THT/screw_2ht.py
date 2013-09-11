@@ -28,13 +28,13 @@ from dynamic_graph.sot.screwing.rob_view_lib import *
 #-------------------------------------------------------------------------
 # VELOCITY CONTROL
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
-from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
 gain = 5
 
 # ACCELERATION CONTROL
 """
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
-from dynamic_graph.sot.screwing.acc_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSit
+from dynamic_graph.sot.screwing.acc_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
 gain = 50
 """
 #-------------------------------------------------------------------------
@@ -216,7 +216,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.002:
             robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.5,0.,0.,0.,0.))
-            goToHalfSit(robot,solver)
+            goToHalfSitting(robot,solver)
             state = 10
             print "time = "+str(robot.device.control.time)
 
