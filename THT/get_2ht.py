@@ -157,26 +157,25 @@ robot.device.viewer.updateElementConfig('TwoHandTool',TwoHandTool)
 #-----------------------------------------------------------------------------
 # --- TRACER ------------------------------------------------------------------
 #-----------------------------------------------------------------------------
-"""
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
 tr.open('/tmp/','dyn_','.dat')
 tr.start()
 robot.device.after.addSignal('tr.triger')
 
-tr.add('robot.device.state','qn')
-tr.add('robot.dynamic.com','com')
+dyn = robot.dynamic
 
-robot.device.after.addSignal('tr.triger')
-robot.device.after.addSignal('robot.dynamic.com')
-robot.device.after.addSignal('robot.device.state')
-"""
+robot.device.after.addSignal('dyn.com')
+robot.device.after.addSignal('dyn.position')
 
+tr.add('dyn.position','q')
+tr.add('dyn.com','com')
 
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-gainMax = 5
+gainMax = 2
+gainMin = 0.4
 
-get_2ht(robot,solver,TwoHandTool,gainMax)
+get_2ht(robot,solver,TwoHandTool,gainMax,gainMin)

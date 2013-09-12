@@ -112,11 +112,6 @@ def goToHalfSitting(robot,solver):
 
     # Task posture reference
     robot.mTasks['posture'].gotoq(2,pose,chest=[],head=[],rleg=[],lleg=[],rarm=[],larm=[],rhand=[],lhand=[])
-    """
-    robot.mTasks['posture'].ref = vectorToTuple(pose)
-    robot.mTasks['posture'].gain.setConstant(2)
-    robot.mTasks['posture'].feature.selec.value='111111111111111111111111111111111111'
-    """
 
     # Eventual taskPosture creation
     if 'taskposture' not in solver.toList():
@@ -135,7 +130,7 @@ def moveRightHandToTarget(robot,solver,target,gain):
 	# Reference and gain setting
 	############################################################
 
-	gotoNd(robot.mTasks['rh'],target,'000111',(gain,gain/50,0.01,0.9))
+	gotoNd(robot.mTasks['rh'],target,'000111',(gain,gain/50.0,0.01,0.9))
 
 	############################################################
 	# Push
@@ -158,7 +153,7 @@ def moveRightHandToTarget(robot,solver,target,gain):
 #			catch the tool
 # ________________________________________________________________________
 # ************************************************************************
-def get_2ht(robot,solver,TwoHandTool,gainMax):
+def get_2ht(robot,solver,TwoHandTool,gainMax,gainMin):
     #TwoHandTool = (0.4,-0.1,0.9,0.,0.,pi/2)
     #TwoHandTool = (xd,yd,zd,roll,pitch,yaw)
     
@@ -177,10 +172,10 @@ def get_2ht(robot,solver,TwoHandTool,gainMax):
     # far from it, with slope st. at <arg3>m from the target, <arg4>% of the max gain
     # value is reached
     target = vectorToTuple(refToSupportMatrix[0:3,3])
-    gotoNd(robot.mTasks['rh'], target, "000111",(gainMax,gainMax/5,0.01,0.9))
+    gotoNd(robot.mTasks['rh'], target, "000111",(gainMax,gainMin,0.01,0.9))
     
     target = vectorToTuple(refToTriggerMatrix[0:3,3])
-    gotoNd(robot.mTasks['lh'], target, "000111",(gainMax,gainMax/5,0.01,0.9))
+    gotoNd(robot.mTasks['lh'], target, "000111",(gainMax,gainMin,0.01,0.9))
     
     # Orientation RF and LF - Needed featureVector3 to get desired behaviour
     featureVecRH = FeatureVector3("featureVecRH")
@@ -241,8 +236,9 @@ def createRelativeTask(robot):
 #           Task: The robot takes the screw driver to the goal
 # ________________________________________________________________________
 # ************************************************************************
-def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
+def screw_2ht(robot,solver,TwoHandTool,goal,gainMax,gainMin):
     #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
+    gainMin = gainMax/5;
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
 
@@ -264,7 +260,7 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax):
     robot.mTasks['screw'].opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
     robot.mTasks['screw'].featureDes.velocity.value=(0,0,0,0,0,0)
     robot.mTasks['screw'].feature.selec.value = '000111'
-    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMax/5,0.01,0.9)
+    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
 
     # TASK Screw orientation
     featureVecScrew = FeatureVector3("featureVecScrew")

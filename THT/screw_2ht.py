@@ -29,13 +29,15 @@ from dynamic_graph.sot.screwing.rob_view_lib import *
 # VELOCITY CONTROL
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
-gain = 5
+gainMax = 10
+gainMin = 0.5
 
 # ACCELERATION CONTROL
 """
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.acc_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
-gain = 50
+gainMax = 50
+gainMin = 2
 """
 #-------------------------------------------------------------------------
 
@@ -158,7 +160,7 @@ def forward(steps):
 
 def supervision():
 
-    global state,tool,robot,solver,pos_err_des,gain,goal
+    global state,tool,robot,solver,pos_err_des,gainMax, gainMin,goal
 
     if state == 0:
         robot.mTasks['lh'].feature.error.recompute(robot.device.control.time)
@@ -180,7 +182,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
             print "Goal: " + str(goal[0])
-            screw_2ht(robot,solver,tool,goal[0],gain)
+            screw_2ht(robot,solver,tool,goal[0],gainMax, gainMin)
             write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
             state += 1
             print "time = "+str(robot.device.control.time)
@@ -191,7 +193,7 @@ def supervision():
             print "state = "+str(state)
             if state<6:
                 print "Goal: " + str(goal[state-2])
-                screw_2ht(robot,solver,tool,goal[state-2],gain)
+                screw_2ht(robot,solver,tool,goal[state-2],gainMax, gainMin)
 
             state += 1
             print "time = "+str(robot.device.control.time)
@@ -200,7 +202,7 @@ def supervision():
     if state == 7:
         robot.mTasks['screw'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['screw'].feature.error.value)[0:3]) < pos_err_des:
-            get_2ht(robot,solver,tool,gain)
+            get_2ht(robot,solver,tool,gainMax, gainMin)
             state += 1
             print "time = "+str(robot.device.control.time)
 
@@ -272,7 +274,7 @@ robot.device.viewer.updateElementConfig('goal4',vectorToTuple(goal4))
 # --- RUN ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-get_2ht(robot,solver,tool,gain)
+get_2ht(robot,solver,tool,gainMax, gainMin)
 
 state = 0
 
