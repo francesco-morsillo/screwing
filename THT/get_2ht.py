@@ -33,7 +33,7 @@ from dynamic_graph.sot.screwing.vel_control_functions import get_2ht
 
 # ACCELERATION CONTROL
 #from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
-#from dynamic_graph.sot.screwing.functions import get_2ht
+#from dynamic_graph.sot.screwing.acc_control_functions import get_2ht
 #-------------------------------------------------------------------------
 
 
@@ -133,7 +133,7 @@ def stop(): runner.pause()
 @optionalparentheses
 def next(): inc()
 @optionalparentheses
-def iter():         print 'iter = ',robot.state.time
+def iter():         print 'iter = ',robot.device.state.time
 @optionalparentheses
 def status():       print runner.isPlay
 
@@ -144,8 +144,8 @@ def status():       print runner.isPlay
 
 # TwoHandTool
 xd = 0.4
-yd = -0.13
-zd = 0.9
+yd = -0.1
+zd = 0.8
 roll = 0.
 #pitch = pi/5
 pitch = 0
@@ -175,7 +175,7 @@ tr.add('dyn.com','com')
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-gainMax = 2
+gainMax = 10
 gainMin = 0.4
 
 get_2ht(robot,solver,TwoHandTool,gainMax,gainMin)
