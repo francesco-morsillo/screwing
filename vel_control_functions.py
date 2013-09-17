@@ -37,7 +37,7 @@ from dynamic_graph.sot.core.meta_tasks import gotoNd
 from dynamic_graph.sot.dyninv import TaskInequality
 from dynamic_graph.sot.core.meta_tasks_kine_relative import gotoNdRel, MetaTaskKine6dRel
 
-from numpy import eye, array, dot, pi, linalg
+from numpy import eye, array, dot, pi, linalg, matrix
 
 from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
 
@@ -55,7 +55,7 @@ from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHa
 # ************************************************************************
 def removeUndesiredTasks(solver):
 
-    to_keep = [ 'taskLim', 'taskcontactLF', 'taskcontactRF', 'taskcom']
+    to_keep = [ 'taskLim', 'taskcontactLF', 'taskcontactRF', 'taskcom', 'taskHeight']
 
     for taskname in solver.toList():
         if not taskname in to_keep:
@@ -192,9 +192,7 @@ def get_2ht(robot,solver,TwoHandTool,gainMax,gainMin):
     featureVecLH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
     robot.mTasks['lh'].task.add(featureVecLH.name)
 
-    robot.mTasks['posture'].gotoq(2,array(robot.halfSitting),chest=[], rknee=[],lknee=[])
-
-    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task,robot.mTasks['posture'].task])
+    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task])
 
     # sot loading
 
@@ -258,7 +256,6 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax,gainMin):
     robot.mTasks['screw']=MetaTaskKine6d('screw',robot.dynamic,'screw','right-wrist')
     handMgrip = array( robot.mTasks['rh'].opmodif )
     robot.mTasks['screw'].opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
-    robot.mTasks['screw'].featureDes.velocity.value=(0,0,0,0,0,0)
     robot.mTasks['screw'].feature.selec.value = '000111'
     robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
 
@@ -274,9 +271,6 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax,gainMin):
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
 
-    robot.mTasks['posture'].gotoq(2,array(robot.halfSitting),chest=[], rknee=[],lknee=[])
-
-
     # Goal HM
     refToGoalMatrix = RPYToMatrix(goal)
 
@@ -284,7 +278,8 @@ def screw_2ht(robot,solver,TwoHandTool,goal,gainMax,gainMin):
     robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
     featureVecScrew.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
 
-    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task,robot.mTasks['posture'].task])
+
+    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task])
 
     # sot charging
     solver.sot.damping.value = 0.001
