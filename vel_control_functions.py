@@ -102,7 +102,7 @@ def openGrippers(robot,solver):
 #       Tasks: Go to the half-sitting pose
 # ________________________________________________________________________
 # ************************************************************************
-def goToHalfSitting(robot,solver):
+def goToHalfSitting(robot,solver,gain):
 
     # Remove Other Tasks
     removeUndesiredTasks(solver)
@@ -111,7 +111,7 @@ def goToHalfSitting(robot,solver):
     pose = array(robot.halfSitting)
 
     # Task posture reference
-    robot.mTasks['posture'].gotoq(2,pose,chest=[],head=[],rleg=[],lleg=[],rarm=[],larm=[],rhand=[],lhand=[])
+    robot.mTasks['posture'].gotoq(gain,pose,chest=[],head=[],rleg=[],lleg=[],rarm=[],larm=[],rhand=[],lhand=[])
 
     # Eventual taskPosture creation
     if 'taskposture' not in solver.toList():
@@ -130,7 +130,7 @@ def moveRightHandToTarget(robot,solver,target,gain):
 	# Reference and gain setting
 	############################################################
 
-	gotoNd(robot.mTasks['rh'],target,'000111',(gain,gain/50.0,0.01,0.9))
+	gotoNd(robot.mTasks['rh'],target,'000111',(gain,gain/5.0,0.01,0.9))
 
 	############################################################
 	# Push
@@ -234,50 +234,53 @@ def createRelativeTask(robot):
 #           Task: The robot takes the screw driver to the goal
 # ________________________________________________________________________
 # ************************************************************************
-def screw_2ht(robot,solver,TwoHandTool,goal,gainMax,gainMin):
-    #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
-    gainMin = gainMax/5;
 
-    if 'rel' not in robot.mTasks: createRelativeTask(robot)
-
-    # Screw Lenght
-    screw_len = 0.03
+# This matrix has to be computed only before the first screw.
+def createScrewTask(robot,TwoHandTool):
 
     refToTwoHandToolMatrix = array(RPYToMatrix(TwoHandTool))
 
     #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
-    robot.mTasks['rh'].feature.position.recompute(0)
-    robot.mTasks['lh'].feature.position.recompute(0)
+    robot.mTasks['rh'].feature.position.recompute(robot.device.control.time)
     RHToTwoHandToolMatrix = dot(linalg.inv(array(robot.mTasks['rh'].feature.position.value)),refToTwoHandToolMatrix)
     #!!!!!! RH and Support are different references, because the X rotation is not controlled in positioning!!!!!!!!!!!!!!!!!!!!!!!!!!
     RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
 
+    # Screw Lenght - unused at the moment
+    #screw_len = 0.03
+    
     # TASK Screw
     robot.mTasks['screw']=MetaTaskKine6d('screw',robot.dynamic,'screw','right-wrist')
     handMgrip = array( robot.mTasks['rh'].opmodif )
     robot.mTasks['screw'].opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
     robot.mTasks['screw'].feature.selec.value = '000111'
-    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
 
     # TASK Screw orientation
-    featureVecScrew = FeatureVector3("featureVecScrew")
-    plug(robot.dynamic.signal('rh'),featureVecScrew.signal('position'))
-    plug(robot.dynamic.signal('Jrh'),featureVecScrew.signal('Jq'))
-    featureVecScrew.vector.value = array([0.,0.,-1.])
-    robot.mTasks['screw'].task.add(featureVecScrew.name)
+    robot.mTasks['screw'].featureVec = FeatureVector3("featureVecScrew")
+    plug(robot.dynamic.signal('rh'),robot.mTasks['screw'].featureVec.signal('position'))
+    plug(robot.dynamic.signal('Jrh'),robot.mTasks['screw'].featureVec.signal('Jq'))
+    robot.mTasks['screw'].featureVec.vector.value = array([0.,0.,-1.])
+    robot.mTasks['screw'].task.add(robot.mTasks['screw'].featureVec.name)
+
+
+def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
+    #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
+    gainMin = gainMax/5;
+
+    if 'rel' not in robot.mTasks: createRelativeTask(robot)
+    if 'screw' not in robot.mTasks: createScrewTask(robot,tool)
 
     # Task Relative
     gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
-
 
     # Goal HM
     refToGoalMatrix = RPYToMatrix(goal)
 
     # Aim setting
     robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
-    featureVecScrew.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
-
+    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
+    robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
 
     tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task])
 
