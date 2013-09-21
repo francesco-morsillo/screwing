@@ -27,6 +27,7 @@ from dynamic_graph.sot.screwing.rob_view_lib import *
 ############################################################
 #-------------------------------------------------------------------------
 # VELOCITY CONTROL
+
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
 gainMax = 10
@@ -222,7 +223,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.002:
             robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.5,0.,0.,0.,0.))
-            goToHalfSitting(robot,solver)
+            goToHalfSitting(robot,solver,1)
             state = 23
             print "time = "+str(robot.device.control.time)
 
@@ -254,7 +255,7 @@ def supervision():
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.0,0.,0.,0.,0.))
 
-P72 = (0.75,-0.45,1.0,0.,0.,1.57)
+P72 = (0.75,-0.45,1.15,0.,0.,1.57)
 robot.device.viewer.updateElementConfig('P72',P72)
 
 limit1 = array(P72) + array([-0.22,0.3,0.32,0.,1.57,-1.57])
@@ -262,13 +263,13 @@ limit2 = array(P72) + array([-0.23,-0.3,0.23,0.,1.57,-1.57])
 limit3 = array(P72) + array([-0.23,-0.3,-0.38,0.,1.57,-1.57])
 limit4 = array(P72) + array([-0.22,0.3,-0.33,0.,1.57,-1.57])
 
-goal1 = array(P72) + array([-0.22,0.2,0.25,0.,1.57,-1.57])
+goal1 = array(P72) + array([-0.22,0.2,0.2,0.,1.57,-1.57])
 goal2 = array(P72) + array([-0.22,0.1,0.25,0.,1.57,-1.57])
-goal3 = array(P72) + array([-0.22,0.,0.25,0.,1.57,-1.57])
+goal3 = array(P72) + array([-0.22,0.,0.2,0.,1.57,-1.57])
 
-goal10 = array(P72) + array([-0.2,0.2,-0.25,0.,1.57,-1.57])
+goal10 = array(P72) + array([-0.2,0.2,-0.2,0.,1.57,-1.57])
 goal9 = array(P72) + array([-0.2,0.1,-0.25,0.,1.57,-1.57])
-goal8 = array(P72) + array([-0.2,0.,-0.25,0.,1.57,-1.57])
+goal8 = array(P72) + array([-0.2,0.,-0.2,0.,1.57,-1.57])
 
 goal4 = goal3 + 0.2*(goal8-goal3)
 goal5 = goal3 + 0.4*(goal8-goal3)
@@ -283,10 +284,7 @@ goal14 = goal10 + 0.8*(goal1-goal10)
 #goal = array([goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8,goal9,goal10])
 goal = array([goal9,goal10,goal11,goal12,goal13,goal14,goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8])
 
-robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal1))
-#robot.device.viewer.updateElementConfig('goal2',vectorToTuple(goal2))
-#robot.device.viewer.updateElementConfig('goal3',vectorToTuple(goal3))
-#robot.device.viewer.updateElementConfig('goal4',vectorToTuple(goal4))
+robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal[0]))
 
 # ------------------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------
