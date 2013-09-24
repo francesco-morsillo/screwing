@@ -1,12 +1,16 @@
-# ______________________________________________________________________________
-# ******************************************************************************
-#
-#    USE TOOL
-#       Robot: HRP-2 N.14
-#       Tasks: Screwing Mission
-# 
-# ______________________________________________________________________________
-# ******************************************************************************  
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dynamics import *
@@ -25,7 +29,7 @@ from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMat
 
 from dynamic_graph.sot.screwing.rob_view_lib import *
 
-from numpy import linalg, array, pi
+from numpy import array,pi,linalg
 
 
 ############################################################
@@ -33,19 +37,19 @@ from numpy import linalg, array, pi
 ############################################################
 #-------------------------------------------------------------------------
 # VELOCITY CONTROL
-
+"""
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
 gainMax = 10
 gainMin = 0.5
-
-# ACCELERATION CONTROL
 """
+# ACCELERATION CONTROL
+
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
-from dynamic_graph.sot.screwing.acc_control_functions import get_2ht, openGrippers, closeGrippers, goToHalfSitting, screw_2ht
+from dynamic_graph.sot.screwing.acc_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
 gainMax = 50
 gainMin = 2
-"""
+
 #-------------------------------------------------------------------------
 
 class Robot:
@@ -126,11 +130,11 @@ def inc():
     robot.device.increment(robot.timeStep)
     attime.run(robot.device.control.time)
     updateComDisplay(robot.device,robot.dynamic.com)
-
+    
     if state >= 3 and state <= 21: 
         updateToolDisplay(robot.mTasks['screw'],linalg.inv(TwoHandToolToScrewMatrix),robot.device)
     """
-    if state >= 3 and state <= 21:
+    if state >= 3 and state <= 8:
         record_zmp(robot.device,robot.dynamic,zmp_out,robot.timeStep)
 	record_hip(robot.device,robot.dynamic,hip_out,robot.timeStep)
 	record_pos(robot.device,robot.dynamic,pos_out,robot.timeStep)
@@ -249,7 +253,7 @@ def supervision():
     if state == 21200:
         state = 22
         print "time = "+str(robot.device.control.time)
-
+        
 
 # ------------------------------------------------------------------------------
 # --- DATA ----------------------------------------------------------------
@@ -258,7 +262,7 @@ def supervision():
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.0,0.,0.,0.,0.))
 
-P72 = (0.75,-0.45,1.05,0.,0.,1.57)
+P72 = (0.75,-0.45,1.15,0.,0.,1.57)
 robot.device.viewer.updateElementConfig('P72',P72)
 
 limit1 = array(P72) + array([-0.22,0.3,0.32,0.,1.57,-1.57])
@@ -289,11 +293,11 @@ goal = array([goal9,goal10,goal11,goal12,goal13,goal14,goal1,goal2,goal3,goal4,g
 
 robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal[0]))
 
-#-----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------
-#-----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-get_2ht(robot,solver,tool,gainMax,gainMin)
+get_2ht(robot,solver,tool,gainMax, gainMin)
 
 state = 0
 
@@ -302,4 +306,35 @@ state = 0
 zmp_out = open("/tmp/data.zmp","w")
 hip_out = open("/tmp/data.hip","w")
 pos_out = open("/tmp/data.pos","w")
+"""
+
+
+"""
+OLD GOALS
+
+#goals
+goal1 = array(P72) + array([-0.3,-0.3,0.3,0.,1.57,-1.57])
+#goal4 = array(P72) + array([-0.3,+0.3,0.3,0.,1.57,-1.57])
+#goal3 = array(P72) + array([-0.3,+0.3,-0.4,0.,1.57,-1.57])
+#goal2 = array(P72) + array([-0.3,-0.3,-0.4,0.,1.57,-1.57])
+
+goal12 = array(P72) + array([-0.3,-0.3,0.1,0.,1.57,-1.57])
+goal11 = array(P72) + array([-0.3,-0.3,-0.15,0.,1.57,-1.57])
+goal10 = array(P72) + array([-0.3,-0.3,-0.4,0.,1.57,-1.57])
+
+goal9 = array(P72) + array([-0.3,-0.1,-0.4,0.,1.57,-1.57])
+goal8 = array(P72) + array([-0.3,+0.1,-0.4,0.,1.57,-1.57])
+goal7 = array(P72) + array([-0.3,+0.3,-0.4,0.,1.57,-1.57])
+
+goal6 = array(P72) + array([-0.3,+0.3,-0.2,0.,1.57,-1.57])
+goal5 = array(P72) + array([-0.3,+0.3,0.1,0.,1.57,-1.57])
+goal4 = array(P72) + array([-0.3,+0.3,0.3,0.,1.57,-1.57])
+
+goal3 = array(P72) + array([-0.3,+0.1,0.3,0.,1.57,-1.57])
+goal2 = array(P72) + array([-0.3,-0.1,0.3,0.,1.57,-1.57])
+
+goal3 = array([0.5,0.0,0.5,0.,1.57,0.])
+goal4 = array([0.5,-0.6,0.5,0.,1.57,0.])
+goal1 = array([0.5,-0.6,1.2,0.,1.57,0.])
+goal2 = array([0.5,0.0,1.2,0.,1.57,0.])
 """

@@ -42,7 +42,7 @@ from numpy import eye, array, dot, pi, linalg
 from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
 
-
+from dynamic_graph.sot.screwing.vel_control_functions import createFeatureVec
 
 
 
@@ -56,7 +56,7 @@ from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHa
 # ************************************************************************
 def removeUndesiredTasks(solver):
 
-    to_keep = [ 'taskLim', 'taskcontactLF', 'taskcontactRF', 'taskcom', 'taskposture','taskHeight']
+    to_keep = [ 'taskLim', 'taskcontactLF', 'taskcontactRF', 'taskcom', 'taskposture']
 
     for taskname in solver.toList():
         if not taskname in to_keep:
@@ -185,28 +185,15 @@ def get_2ht(robot,solver,TwoHandTool,gainMax,gainMin):
     gotoNd(robot.mTasks['lh'], target, "000111",(gainMax,gainMin,0.01,0.9))
     
     # Orientation RF and LF - Needed featureVector3 to get desired behaviour
-    featureVecRH = FeatureVector3("featureVecRH")
-    plug(robot.dynamic.signal('rh'),featureVecRH.signal('position'))
-    plug(robot.dynamic.signal('Jrh'),featureVecRH.signal('Jq'))
-    featureVecRH.vector.value = array([1.,0.,0.])
-    featureVecRH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([1.,0.,0.]))
-    robot.mTasks['rh'].task.add(featureVecRH.name)
+    if not hasattr(robot.mTasks['rh'], 'featureVec'):
+        createFeatureVec(robot,'rh',array([1.,0.,0.]))
+    if not hasattr(robot.mTasks['lh'], 'featureVec'):
+        createFeatureVec(robot,'lh',array([1.,0.,0.]))
+
+    robot.mTasks['rh'].featureVec.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([1.,0.,0.]))
+    robot.mTasks['lh'].featureVec.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
     
-    featureVecLH = FeatureVector3("featureVecLH")
-    plug(robot.dynamic.signal('lh'),featureVecLH.signal('position'))
-    plug(robot.dynamic.signal('Jlh'),featureVecLH.signal('Jq'))
-    featureVecLH.vector.value = array([1.,0.,0.])
-    featureVecLH.positionRef.value = dot(refToTwoHandToolMatrix[0:3,0:3],array([-1.,0.,0.]))
-    robot.mTasks['lh'].task.add(featureVecLH.name)
-    
-    gotoNd(robot.mTasks['chest'],(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
-    robot.mTasks['chest'].task.errorTimeDerivative.value = [0., 0., 0.]
-    
-    gotoNd(robot.mTasks['waist'],(0.,0.,0.,0.,0.,0.),'111000',(1.,))	# inside the function rot=0 --> we set a random position not to control it
-    robot.mTasks['waist'].task.errorTimeDerivative.value = [0., 0., 0.]
-    
-    
-    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task, robot.mTasks['waist'].task, robot.mTasks['chest'].task, robot.tasksIne['taskHeight']])
+    tasks = array([robot.mTasks['rh'].task, robot.mTasks['lh'].task])
 
 
     # sot loading
@@ -230,7 +217,7 @@ def createRelativeTask(robot):
 
     robot.mTasks['rel'] = MetaTaskDyn6dRel('rel',robot.dynamic,'rh','lh','right-wrist','left-wrist')
 
-    robot.mTasks['rel'].feature.frame('current')
+    robot.mTasks['rel'].feature.frame('desired')
     robot.mTasks['rel'].gain.setConstant(10)
     robot.mTasks['rel'].task.dt.value = robot.timeStep
     robot.mTasks['rel'].featureDes.velocity.value=(0,0,0,0,0,0)
@@ -254,7 +241,6 @@ def createRelativeTask(robot):
 def createScrewTask(robot,TwoHandTool):
 
     refToTwoHandToolMatrix = array(RPYToMatrix(TwoHandTool))
-
     #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
     robot.mTasks['rh'].feature.position.recompute(robot.device.control.time)
     RHToTwoHandToolMatrix = dot(linalg.inv(array(robot.mTasks['rh'].feature.position.value)),refToTwoHandToolMatrix)
@@ -282,7 +268,6 @@ def createScrewTask(robot,TwoHandTool):
 
 def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
-    gainMin = gainMax/5;
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
     if 'screw' not in robot.mTasks: createScrewTask(robot,tool)
@@ -302,12 +287,10 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task])
 
     # sot charging
-    solver.sot.damping.value = 0.001
-
-    removeUndesiredTasks(solver)
-
-    for i in range(len(tasks)):
-        solver.push(tasks[i])
+    if not (('taskrel' in solver.toList() ) and ('taskscrew' in solver.toList())):
+        removeUndesiredTasks(solver)
+        for i in range(len(tasks)):
+            solver.push(tasks[i])
 
 
 """

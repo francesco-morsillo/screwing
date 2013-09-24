@@ -36,7 +36,7 @@ from numpy import *
 #from dynamic_graph.sot.screwing.vel_control_functions import moveRightHandToTarget
 
 # ACCELERATION CONTROL
-from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
+from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.acc_control_functions import moveRightHandToTarget
 #-------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 
-from numpy import*
-from dynamic_graph.sot.screwing.utility import *
+from numpy import dot, array, linalg
+from dynamic_graph.sot.screwing.utility import extractRPYFromRot
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
 
 

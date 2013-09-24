@@ -22,18 +22,26 @@ from dynamic_graph.sot.core.utils.attime import attime
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
 from dynamic_graph.sot.screwing.rob_view_lib import *
 
+from numpy import array, pi
 
 ############################################################
 ###   CHOICE OF FIRST OR SECOND ORDER
 ############################################################
 #-------------------------------------------------------------------------
+"""
 # VELOCITY CONTROL
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import get_2ht
-
+gainMax = 10
+gainMin = 0.4
+"""
 # ACCELERATION CONTROL
-#from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
-#from dynamic_graph.sot.screwing.acc_control_functions import get_2ht
+
+from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
+from dynamic_graph.sot.screwing.acc_control_functions import get_2ht
+gainMax = 50
+gainMin = 2
+
 #-------------------------------------------------------------------------
 
 
@@ -174,8 +182,5 @@ tr.add('dyn.com','com')
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
-
-gainMax = 10
-gainMin = 0.4
 
 get_2ht(robot,solver,TwoHandTool,gainMax,gainMin)
