@@ -22,26 +22,28 @@ from dynamic_graph.sot.core.utils.attime import attime
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
 from dynamic_graph.sot.screwing.rob_view_lib import *
 
+from dynamic_graph.sot.core.utils.history import History
+
 from numpy import array, pi
 
 ############################################################
 ###   CHOICE OF FIRST OR SECOND ORDER
 ############################################################
 #-------------------------------------------------------------------------
-"""
+
 # VELOCITY CONTROL
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import get_2ht
 gainMax = 10
 gainMin = 0.4
-"""
-# ACCELERATION CONTROL
 
+# ACCELERATION CONTROL
+"""
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.acc_control_functions import get_2ht
 gainMax = 50
-gainMin = 2
-
+gainMin = 0.2
+"""
 #-------------------------------------------------------------------------
 
 
@@ -128,6 +130,9 @@ def inc():
     attime.run(robot.device.control.time)
     updateComDisplay(robot.device,robot.dynamic.com)
 
+    if(robot.device.state.value[9]==0.7): print "\nReached right joint limit"
+    if(robot.device.state.value[15]==0.7): print "\nReached left joint limit"
+
 @loopInThread
 def loop():
     inc()
@@ -150,7 +155,7 @@ def status():       print runner.isPlay
 # ---- TWOHANDSTOOL PARAMETERS -------------------------------------------------------------------
 
 
-# TwoHandTool
+# tool
 xd = 0.4
 yd = -0.1
 zd = 0.8
@@ -159,9 +164,11 @@ roll = 0.
 pitch = 0
 yaw = pi/2
 
-TwoHandTool = (xd,yd,zd,roll,pitch,yaw)
-robot.device.viewer.updateElementConfig('TwoHandTool',TwoHandTool)
+tool = (xd,yd,zd,roll,pitch,yaw)
 
+tool = (0.5,-0.1,0.9,0.,0.,pi/2)
+robot.device.viewer.updateElementConfig('TwoHandTool',tool)
+"""
 #-----------------------------------------------------------------------------
 # --- TRACER ------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -178,9 +185,9 @@ robot.device.after.addSignal('dyn.position')
 
 tr.add('dyn.position','q')
 tr.add('dyn.com','com')
-
+"""
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-get_2ht(robot,solver,TwoHandTool,gainMax,gainMin)
+get_2ht(robot,solver,tool,gainMax,gainMin)

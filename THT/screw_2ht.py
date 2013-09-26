@@ -24,6 +24,7 @@ from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, r
 from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMatrix,TwoHandToolToTriggerMatrix
 
 from dynamic_graph.sot.screwing.rob_view_lib import *
+from dynamic_graph.sot.core.utils.history import History
 
 from numpy import linalg, array, pi
 
@@ -285,7 +286,7 @@ goal13 = goal10 + 0.6*(goal1-goal10)
 goal14 = goal10 + 0.8*(goal1-goal10)
 
 #goal = array([goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8,goal9,goal10])
-goal = array([goal9,goal10,goal11,goal12,goal13,goal14,goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8])
+goal = array([goal10,goal11,goal12,goal13,goal14,goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8,goal9])
 
 robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal[0]))
 

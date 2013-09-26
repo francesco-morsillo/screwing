@@ -37,7 +37,7 @@ from dynamic_graph.sot.core.meta_tasks import gotoNd
 from dynamic_graph.sot.dyninv import TaskInequality
 from dynamic_graph.sot.core.meta_tasks_kine_relative import gotoNdRel, MetaTaskKine6dRel
 
-from numpy import eye, array, dot, pi, linalg, matrix
+from numpy import eye, array, dot, pi, linalg, matrix, ndarray
 
 from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
 
@@ -272,11 +272,13 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
-    # Goal HM
-    refToGoalMatrix = RPYToMatrix(goal)
-
     # Aim setting
-    robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
+    if isinstance (goal,ndarray):
+        refToGoalMatrix = RPYToMatrix(goal)
+        robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
+    else: #goal is a signal
+        plug(goal,robot.mTasks['screw'].featureDes.position)
+
     robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
     robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
 
