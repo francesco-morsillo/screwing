@@ -32,12 +32,17 @@ from numpy import *
 ############################################################
 #-------------------------------------------------------------------------
 # VELOCITY CONTROL
-#from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
-#from dynamic_graph.sot.screwing.vel_control_functions import moveRightHandToTarget
+
+from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
+from dynamic_graph.sot.screwing.vel_control_functions import moveRightHandToTarget
+gainMax = 5
 
 # ACCELERATION CONTROL
+"""
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.acc_control_functions import moveRightHandToTarget
+gainMax = 50
+"""
 #-------------------------------------------------------------------------
 
 
@@ -175,7 +180,7 @@ robot.after.addSignal("dyn.acceleration")
 # RH metaTask
 target = (0.5,-0.2,1.3)
 robot.device.viewer.updateElementConfig('zmp',target+(0,0,0))
-moveRightHandToTarget(robot,solver,target,50)
+moveRightHandToTarget(robot,solver,target,gainMax)
 
 
 ### EXPERIMENT
