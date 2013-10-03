@@ -3,7 +3,7 @@ from dynamic_graph.ros import *
 
 from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo
 
-def plugObject(robot,objectInWorld):
+def plugObject(robot):
 
     robot.ros = Ros(robot)
     robot.rosImport = robot.ros.rosImport
@@ -30,4 +30,4 @@ def plugObject(robot,objectInWorld):
     plug(OBJECTINCAMERA_DG.sout,OBJECTINWORLD.sin2)
     plug(robot.frames[robot.cameraFrameName].position,OBJECTINWORLD.sin1)
 
-    objectInWorld = OBJECTINWORLD.sout
+    return OBJECTINWORLD.sout

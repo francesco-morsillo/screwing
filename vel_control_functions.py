@@ -31,7 +31,7 @@ from dynamic_graph import plug
 from dynamic_graph.sot.core.matrix_util import vectorToTuple, matrixToTuple, matrixToRPY, RPYToMatrix
 from dynamic_graph.sot.core import FeatureGeneric, FeaturePoint6d
 from dynamic_graph.sot.core.feature_vector3 import *
-
+from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Selec_column_of_matrix
 from dynamic_graph.sot.core.meta_tasks_kine import MetaTaskKine6d, MetaTaskKineCom
 from dynamic_graph.sot.core.meta_tasks import gotoNd
 from dynamic_graph.sot.dyninv import TaskInequality
@@ -102,7 +102,7 @@ def openGrippers(robot,solver):
 #       Tasks: Go to the half-sitting pose
 # ________________________________________________________________________
 # ************************************************************************
-def goToHalfSitting(robot,solver,gain):
+def goToHalfSitting(robot,solver,g):
 
     # Remove Other Tasks
     removeUndesiredTasks(solver)
@@ -111,7 +111,8 @@ def goToHalfSitting(robot,solver,gain):
     pose = array(robot.halfSitting)
 
     # Task posture reference
-    robot.mTasks['posture'].gotoq(gain,pose,chest=[],head=[],rleg=[],lleg=[],rarm=[],larm=[],rhand=[],lhand=[])
+    robot.mTasks['posture'].ref = robot.halfSitting
+    robot.mTasks['posture'].gain.setConstant(g)
 
     # Eventual taskPosture creation
     if 'taskposture' not in solver.toList():
@@ -141,6 +142,33 @@ def moveRightHandToTarget(robot,solver,target,gain):
 	solver.push(robot.mTasks['rh'].task)
 
 
+
+# ________________________________________________________________________
+# ************************************************************************
+#	MOVE RIGHT HAND TO TARGET
+#          Task: The robot moves the han to a given position
+# ________________________________________________________________________
+# ************************************************************************
+
+def follow3DPoint(robot,solver,target,gain):
+
+    ############################################################
+    # Reference and gain setting
+    ############################################################
+
+    if isinstance (target,tuple):
+        robot.mTasks['gaze'].goto3D(target,(gain,gain/5.0,0.01,0.9))
+    else: #target is a signal
+        plug(target,robot.mTasks['gaze'].proj.point3D)
+        robot.mTasks['gaze'].gain.setByPoint(gain,gain/5.0,0.01,0.9)
+    
+    ############################################################
+    # Push
+    ############################################################
+	
+    removeUndesiredTasks(solver)
+    
+    solver.push(robot.mTasks['gaze'].task)
 
 
 
@@ -261,12 +289,18 @@ def createScrewTask(robot,TwoHandTool):
     robot.mTasks['screw'].featureVec.vector.value = array([0.,0.,-1.])
     robot.mTasks['screw'].task.add(robot.mTasks['screw'].featureVec.name)
 
+def createM2Pos(robot,name):
+    robot.m2pos = Selec_column_of_matrix(name)
+    robot.m2pos.selecCols(3)
+    robot.m2pos.selecRows(0,3)
 
 def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
-    if 'screw' not in robot.mTasks: createScrewTask(robot,tool)
+    if 'screw' not in robot.mTasks:
+        createScrewTask(robot,tool)
+        createM2Pos(robot,"M2POS")
 
     # Task Relative
     gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
@@ -276,16 +310,20 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     if isinstance (goal,ndarray):
         refToGoalMatrix = RPYToMatrix(goal)
         robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
+        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(goal[0:3])
     else: #goal is a signal
         plug(goal,robot.mTasks['screw'].featureDes.position)
+        plug(goal,robot.m2pos.sin)
+        plug(robot.m2pos.sout,robot.mTasks['gaze'].proj.point3D)
 
+    robot.mTasks['gaze'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
     robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
     robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
 
-    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task])
+    tasks = array([robot.mTasks['rel'].task, robot.mTasks['gaze'].task, robot.mTasks['screw'].task])
 
     # sot charging
-    if not (('taskrel' in solver.toList() ) and ('taskscrew' in solver.toList())):
+    if not ( ('taskrel' in solver.toList()) and ('taskgaze' in solver.toList()) and ('taskscrew' in solver.toList()) ):
         removeUndesiredTasks(solver)
         for i in range(len(tasks)):
             solver.push(tasks[i])
