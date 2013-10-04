@@ -31,7 +31,7 @@ from dynamic_graph import plug
 from dynamic_graph.sot.core.matrix_util import vectorToTuple, matrixToTuple, matrixToRPY, RPYToMatrix
 from dynamic_graph.sot.core import FeatureGeneric, FeaturePoint6d
 from dynamic_graph.sot.core.feature_vector3 import *
-from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Selec_column_of_matrix
+from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Selec_column_of_matrix, Selec_of_matrix, Multiply_matrix_vector
 from dynamic_graph.sot.core.meta_tasks_kine import MetaTaskKine6d, MetaTaskKineCom
 from dynamic_graph.sot.core.meta_tasks import gotoNd
 from dynamic_graph.sot.dyninv import TaskInequality
@@ -107,12 +107,10 @@ def goToHalfSitting(robot,solver,g):
     # Remove Other Tasks
     removeUndesiredTasks(solver)
 
-    # Pose definition
-    pose = array(robot.halfSitting)
-
     # Task posture reference
     robot.mTasks['posture'].ref = robot.halfSitting
-    robot.mTasks['posture'].gain.setConstant(g)
+    robot.mTasks['posture'].gain.setByPoint(g,g/5.0,0.01,0.9)
+    robot.mTasks['posture'].feature.selec.value = '111111111111111111111111111111111111'
 
     # Eventual taskPosture creation
     if 'taskposture' not in solver.toList():
@@ -127,19 +125,19 @@ def goToHalfSitting(robot,solver,g):
 # ************************************************************************
 def moveRightHandToTarget(robot,solver,target,gain):
 
-	############################################################
-	# Reference and gain setting
-	############################################################
+    ############################################################
+    # Reference and gain setting
+    ############################################################
 
-	gotoNd(robot.mTasks['rh'],target,'000111',(gain,gain/5.0,0.01,0.9))
+    gotoNd(robot.mTasks['rh'],target,'000111',(gain,gain/5.0,0.01,0.9))
 
-	############################################################
-	# Push
-	############################################################
+    ############################################################
+    # Push
+    ############################################################
 	
-	removeUndesiredTasks(solver)
+    removeUndesiredTasks(solver)
 
-	solver.push(robot.mTasks['rh'].task)
+    solver.push(robot.mTasks['rh'].task)
 
 
 
@@ -284,15 +282,22 @@ def createScrewTask(robot,TwoHandTool):
 
     # TASK Screw orientation
     robot.mTasks['screw'].featureVec = FeatureVector3("featureVecScrew")
-    plug(robot.dynamic.signal('rh'),robot.mTasks['screw'].featureVec.signal('position'))
-    plug(robot.dynamic.signal('Jrh'),robot.mTasks['screw'].featureVec.signal('Jq'))
-    robot.mTasks['screw'].featureVec.vector.value = array([0.,0.,-1.])
+    plug(robot.mTasks['screw'].opPointModif.position,robot.mTasks['screw'].featureVec.signal('position'))
+    plug(robot.mTasks['screw'].opPointModif.jacobian,robot.mTasks['screw'].featureVec.signal('Jq'))
+    robot.mTasks['screw'].featureVec.vector.value = array([0.,0.,1.])
     robot.mTasks['screw'].task.add(robot.mTasks['screw'].featureVec.name)
 
-def createM2Pos(robot,name):
-    robot.m2pos = Selec_column_of_matrix(name)
+def createM2Pos(robot):
+    robot.m2pos = Selec_column_of_matrix("M2POS")
     robot.m2pos.selecCols(3)
     robot.m2pos.selecRows(0,3)
+
+def createVecMult(robot):
+    robot.selec = Selec_of_matrix("SELEC")
+    robot.mult = Multiply_matrix_vector("MULT")
+    robot.selec.selecCols(0,3)
+    robot.selec.selecRows(0,3)
+    plug(robot.selec.sout,robot.mult.sin1)
 
 def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
@@ -300,7 +305,8 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
     if 'screw' not in robot.mTasks:
         createScrewTask(robot,tool)
-        createM2Pos(robot,"M2POS")
+        createM2Pos(robot)
+        createVecMult(robot)
 
     # Task Relative
     gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
@@ -308,17 +314,24 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
 
     # Aim setting
     if isinstance (goal,ndarray):
-        refToGoalMatrix = RPYToMatrix(goal)
+        if len(goal)==6:
+            refToGoalMatrix = RPYToMatrix(goal)
+        else:
+            refToGoalMatrix = goal
         robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
-        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(goal[0:3])
+        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(refToGoalMatrix[0:3,3])
+        robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
     else: #goal is a signal
         plug(goal,robot.mTasks['screw'].featureDes.position)
         plug(goal,robot.m2pos.sin)
         plug(robot.m2pos.sout,robot.mTasks['gaze'].proj.point3D)
+        plug(goal,robot.selec.sin)
+        robot.mult.sin2.value = (0.,0.,-1.)
+        plug(robot.mult.sout,robot.mTasks['screw'].featureVec.positionRef)
 
     robot.mTasks['gaze'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
     robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
-    robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
+    
 
     tasks = array([robot.mTasks['rel'].task, robot.mTasks['gaze'].task, robot.mTasks['screw'].task])
 
