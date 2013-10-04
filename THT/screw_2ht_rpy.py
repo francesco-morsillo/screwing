@@ -26,7 +26,7 @@ from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMat
 from dynamic_graph.sot.screwing.rob_view_lib import *
 from dynamic_graph.sot.core.utils.history import History
 
-from numpy import linalg, array, pi, eye, dot
+from numpy import linalg, array, pi
 
 
 ############################################################
@@ -165,7 +165,7 @@ def forward(steps):
 
 def supervision():
 
-    global state,tool,robot,solver,pos_err_des,gainMax, gainMin, P72, p72tohole
+    global state,tool,robot,solver,pos_err_des,gainMax, gainMin,goal
 
     if state == 0:
         robot.mTasks['lh'].feature.error.recompute(robot.device.control.time)
@@ -186,8 +186,8 @@ def supervision():
     if state == 2:
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
-            print "Goal: " + str(dot(P72,p72tohole[0]))
-            screw_2ht(robot,solver,tool,dot(P72,p72tohole[0]),gainMax, gainMin)
+            print "Goal: " + str(goal[0])
+            screw_2ht(robot,solver,tool,goal[0],gainMax, gainMin)
             #write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
             state += 1
             print "time = "+str(robot.device.control.time)
@@ -196,12 +196,12 @@ def supervision():
         robot.mTasks['screw'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['screw'].feature.error.value)) < pos_err_des:
             print "state = "+str(state)
-            if state<len(p72tohole)+2:
-                print "Goal: " + str(dot(P72,p72tohole[state-2]))
-                screw_2ht(robot,solver,tool,dot(P72,p72tohole[state-2]),gainMax, gainMin)
-                robot.device.viewer.updateElementConfig('goal1',vectorToTuple(array( matrixToRPY(dot( P72,p72tohole[state-2] )) )))
+            if state<len(goal)+2:
+                print "Goal: " + str(goal[state-2])
+                screw_2ht(robot,solver,tool,goal[state-2],gainMax, gainMin)
+                robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal[state-2]))
 
-            if state == len(p72tohole)+2:
+            if state == len(goal)+2:
                 state = 20
             else:
                 state += 1
@@ -259,60 +259,36 @@ def supervision():
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.0,0.,0.,0.,0.))
 
-P72RPY = (0.75,-0.45,0.85,0.,0.,1.57)
-robot.device.viewer.updateElementConfig('P72',P72RPY)
+P72 = (0.75,-0.45,1.05,0.,0.,1.57)
+robot.device.viewer.updateElementConfig('P72',P72)
 
-P72 = RPYToMatrix(P72RPY)
+limit1 = array(P72) + array([-0.22,0.3,0.32,0.,1.57,-1.57])
+limit2 = array(P72) + array([-0.23,-0.3,0.23,0.,1.57,-1.57])
+limit3 = array(P72) + array([-0.23,-0.3,-0.38,0.,1.57,-1.57])
+limit4 = array(P72) + array([-0.22,0.3,-0.33,0.,1.57,-1.57])
 
-orientation = array([[0.,1.,0.],[0.,0.,-1],[-1.,0.,0.]])
+goal1 = array(P72) + array([-0.22,0.2,0.2,0.,1.57,-1.57])
+goal2 = array(P72) + array([-0.22,0.1,0.25,0.,1.57,-1.57])
+goal3 = array(P72) + array([-0.22,0.,0.2,0.,1.57,-1.57])
 
-p72tohole1 = eye(4); p72tohole1[0:3,0:3] = orientation
-p72tohole1[0:3,3] = array([0.2,0.22,0.1])
+goal10 = array(P72) + array([-0.2,0.2,-0.2,0.,1.57,-1.57])
+goal9 = array(P72) + array([-0.2,0.1,-0.25,0.,1.57,-1.57])
+goal8 = array(P72) + array([-0.2,0.,-0.2,0.,1.57,-1.57])
 
-p72tohole2 = eye(4); p72tohole2[0:3,0:3] = orientation
-p72tohole2[0:3,3] = array([0.1,0.22,0.15])
+goal4 = goal3 + 0.2*(goal8-goal3)
+goal5 = goal3 + 0.4*(goal8-goal3)
+goal6 = goal3 + 0.6*(goal8-goal3)
+goal7 = goal3 + 0.8*(goal8-goal3)
 
-p72tohole3 = eye(4); p72tohole3[0:3,0:3] = orientation
-p72tohole3[0:3,3] = array([0.,0.22,0.1])
+goal11 = goal10 + 0.2*(goal1-goal10)
+goal12 = goal10 + 0.4*(goal1-goal10)
+goal13 = goal10 + 0.6*(goal1-goal10)
+goal14 = goal10 + 0.8*(goal1-goal10)
 
-p72tohole10 = eye(4); p72tohole10[0:3,0:3] = orientation
-p72tohole10[0:3,3] = array([0.2,0.2,-0.2])
+#goal = array([goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8,goal9,goal10])
+goal = array([goal9,goal10,goal11,goal12,goal13,goal14,goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8])
 
-p72tohole9 = eye(4); p72tohole9[0:3,0:3] = orientation
-p72tohole9[0:3,3] = array([0.1,0.2,-0.25])
-
-p72tohole8 = eye(4); p72tohole8[0:3,0:3] = orientation
-p72tohole8[0:3,3] = array([0.,0.2,-0.2])
-
-
-p72tohole4 = eye(4); p72tohole4[0:3,0:3] = orientation
-p72tohole4[0:3,3] = p72tohole3[0:3,3] + 0.2*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-p72tohole5 = eye(4); p72tohole5[0:3,0:3] = orientation
-p72tohole5[0:3,3] = p72tohole3[0:3,3] + 0.4*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-p72tohole6 = eye(4); p72tohole6[0:3,0:3] = orientation
-p72tohole6[0:3,3] = p72tohole3[0:3,3] + 0.6*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-p72tohole7 = eye(4); p72tohole7[0:3,0:3] = orientation
-p72tohole7[0:3,3] = p72tohole3[0:3,3] + 0.8*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-
-p72tohole11 = eye(4); p72tohole11[0:3,0:3] = orientation
-p72tohole11[0:3,3] = p72tohole10[0:3,3] + 0.2*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole12 = eye(4); p72tohole12[0:3,0:3] = orientation
-p72tohole12[0:3,3] = p72tohole10[0:3,3] + 0.4*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole13 = eye(4); p72tohole13[0:3,0:3] = orientation
-p72tohole13[0:3,3] = p72tohole10[0:3,3] + 0.6*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole14 = eye(4); p72tohole14[0:3,0:3] = orientation
-p72tohole14[0:3,3] = p72tohole10[0:3,3] + 0.8*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole = array([p72tohole9,p72tohole10,p72tohole11,p72tohole12,p72tohole13,p72tohole14,p72tohole1,p72tohole2,p72tohole3,p72tohole4,p72tohole5,p72tohole6,p72tohole7,p72tohole8])
-
-robot.device.viewer.updateElementConfig('goal1',vectorToTuple(array(matrixToRPY( dot(P72,p72tohole[0]) ))))
+robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal[0]))
 
 #-----------------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------
