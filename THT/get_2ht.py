@@ -32,18 +32,19 @@ from numpy import array, pi
 #-------------------------------------------------------------------------
 
 # VELOCITY CONTROL
+"""
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.vel_control_functions import get_2ht
 gainMax = 10
 gainMin = 0.4
-
-# ACCELERATION CONTROL
 """
+# ACCELERATION CONTROL
+
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.acc_control_functions import get_2ht
 gainMax = 50
 gainMin = 0.2
-"""
+
 #-------------------------------------------------------------------------
 
 

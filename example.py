@@ -25,7 +25,7 @@ from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynP
 
 from dynamic_graph.sot.core.utils.history import History
 
-from numpy import *
+
 
 ############################################################
 ###   CHOICE OF FIRST OR SECOND ORDER
@@ -41,7 +41,7 @@ gainMax = 5
 """
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
 from dynamic_graph.sot.screwing.acc_control_functions import moveRightHandToTarget
-gainMax = 50
+gainMax = 40
 """
 #-------------------------------------------------------------------------
 
@@ -182,66 +182,31 @@ target = (0.5,-0.2,1.3)
 robot.device.viewer.updateElementConfig('zmp',target+(0,0,0))
 moveRightHandToTarget(robot,solver,target,gainMax)
 
-
-### EXPERIMENT
 """
-solver.rm(robot.mTasks['posture'].task)
-from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynPosture
+### Field of View
+from numpy import array, dot, pi
+from dynamic_graph.sot.core.meta_task_visual_point import MetaTaskVisualPoint
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
 
-robot.mTasks['posture1'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posture1')
-robot.mTasks['posture1'].gotoq(10,array(robot.halfSitting),rknee=[],lknee=[],larm=[],rwrist=[],chest=[],head=[])
+headMcam=array([[0.0,0.0,1.0,0.081],[1.,0.0,0.0,0.072],[0.0,1.,0.0,0.031],[0.0,0.0,0.0,1.0]])
+headMcam = dot(headMcam,rotate('x',10*pi/180))
 
-robot.mTasks['posture2'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posture2')
-robot.mTasks['posture2'].gotoq(10,array(robot.halfSitting),rhip=[],rankle=[],lhip=[],lankle=[],rshoulder=[],relbow=[],rhand=[],lhand=[])
+taskGaze = MetaTaskVisualPoint('Gaze',robot.dynamic,'head','gaze')
+taskGaze.opmodif = matrixToTuple(headMcam)
 
-solver.push(robot.mTasks['posture1'].task)
-solver.push(robot.mTasks['posture2'].task)
-"""
+# --- FOV ---
+taskFoV = MetaTaskVisualPoint('FoV',robot.dynamic,'head','gaze')
+taskFoV.opmodif = matrixToTuple(headMcam)
 
-"""
-robot.mTasks['posturerleg'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posturerleg')
-robot.mTasks['posturerleg'].gotoq(1,array(robot.halfSitting),rleg=[])
+taskFoV.task=TaskInequality('taskFoVineq')
+taskFoV.task.add(taskFoV.feature.name)
+[Xmax,Ymax]=[0.38,0.28]
+taskFoV.task.referenceInf.value = (-Xmax,-Ymax)    # Xmin, Ymin
+taskFoV.task.referenceSup.value = (Xmax,Ymax)  # Xmax, Ymax
+taskFoV.task.dt.value=robot.timeStep
+taskFoV.task.controlGain.value=0.01
+taskFoV.featureDes.xy.value = (0,0)
 
-robot.mTasks['posturelleg'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posturelleg')
-robot.mTasks['posturelleg'].gotoq(1,array(robot.halfSitting),lleg=[])
-
-robot.mTasks['posturechest'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posturechest')
-robot.mTasks['posturechest'].gotoq(1,array(robot.halfSitting),chest=[])
-
-robot.mTasks['posturehead'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posturehead')
-robot.mTasks['posturehead'].gotoq(1,array(robot.halfSitting),head=[])
-
-robot.mTasks['posturerarm'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posturerarm')
-robot.mTasks['posturerarm'].gotoq(1,array(robot.halfSitting),rarm=[],rhand=[])
-
-robot.mTasks['posturelarm'] = MetaTaskDynPosture(robot.dynamic,robot.timeStep,'posturelarm')
-robot.mTasks['posturelarm'].gotoq(1,array(robot.halfSitting),larm=[],lhand=[])
-
-
-#solver.push(robot.mTasks['posturerleg'].task)
-#solver.push(robot.mTasks['posturelleg'].task)
-#solver.push(robot.mTasks['posturechest'].task)
-#solver.push(robot.mTasks['posturerarm'].task)
-#solver.push(robot.mTasks['posturelarm'].task)
-#solver.push(robot.mTasks['posturehead'].task)
-
-attime(2
-       ,(lambda: solver.push(robot.mTasks['posturelarm'].task), "Add LArm to posture")
-       ,(lambda: solver.push(robot.mTasks['posturerleg'].task), "Add RLeg to posture")
-       ,(lambda: solver.push(robot.mTasks['posturelleg'].task), "Add LLeg to posture")
-       )
-
-attime(10
-       ,(lambda: solver.push(robot.mTasks['posturerarm'].task), "Add RArm to posture")
-       ,(lambda: solver.push(robot.mTasks['posturechest'].task), "Add Chest to posture")
-       ,(lambda: solver.push(robot.mTasks['posturehead'].task), "Add Head to posture")
-       )
-"""
-
-
-"""
-rarmDes = initialConfig[robotName][22:28]
-larmDes = initialConfig[robotName][29:35]
-taskPosture.gotoq(10) #rarm=rarmDes,larm=larmDes)
-
+taskGaze.goto3D(target)
+solver.push(taskGaze.task)1
 """

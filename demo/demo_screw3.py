@@ -1,6 +1,9 @@
 
 from dynamic_graph.sot.screwing.vel_control_functions import get_2ht, screw_2ht, goToHalfSitting, closeGrippers, openGrippers
-from numpy import pi, array
+
+from dynamic_graph.sot.core.matrix_util import RPYToMatrix
+
+from numpy import pi, array, eye
 
 class WrapperInt:
     def __init__(self,x):
@@ -10,29 +13,62 @@ class WrapperInt:
         self.value += n
         return self.value
 
+i = WrapperInt(-1)
 
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 
-P72 = (0.75,-0.45,1.15,0.,0.,1.57)
+P72RPY = (0.75,-0.45,0.85,0.,0.,1.57)
 
-goal1 = array(P72) + array([-0.22,0.2,0.2,0.,1.57,-1.57])
-goal2 = array(P72) + array([-0.22,0.1,0.25,0.,1.57,-1.57])
-goal3 = array(P72) + array([-0.22,0.,0.2,0.,1.57,-1.57])
+P72 = RPYToMatrix(P72RPY)
 
-goal10 = array(P72) + array([-0.2,0.2,-0.2,0.,1.57,-1.57])
-goal9 = array(P72) + array([-0.2,0.1,-0.25,0.,1.57,-1.57])
-goal8 = array(P72) + array([-0.2,0.,-0.2,0.,1.57,-1.57])
+orientation = array([[0.,1.,0.],[0.,0.,-1],[-1.,0.,0.]])
 
-goal4 = goal3 + 0.2*(goal8-goal3)
-goal5 = goal3 + 0.4*(goal8-goal3)
-goal6 = goal3 + 0.6*(goal8-goal3)
-goal7 = goal3 + 0.8*(goal8-goal3)
+p72tohole1 = eye(4); p72tohole1[0:3,0:3] = orientation
+p72tohole1[0:3,3] = array([0.2,0.22,0.1])
 
-goal11 = goal10 + 0.2*(goal1-goal10)
-goal12 = goal10 + 0.4*(goal1-goal10)
-goal13 = goal10 + 0.6*(goal1-goal10)
-goal14 = goal10 + 0.8*(goal1-goal10)
+p72tohole2 = eye(4); p72tohole2[0:3,0:3] = orientation
+p72tohole2[0:3,3] = array([0.1,0.22,0.15])
 
-goal = array([goal9,goal10,goal11,goal12,goal13,goal14,goal1,goal2,goal3,goal4,goal5,goal6,goal7,goal8])
+p72tohole3 = eye(4); p72tohole3[0:3,0:3] = orientation
+p72tohole3[0:3,3] = array([0.,0.22,0.1])
 
-i = WrapperInt(-1)
+p72tohole10 = eye(4); p72tohole10[0:3,0:3] = orientation
+p72tohole10[0:3,3] = array([0.2,0.2,-0.2])
+
+p72tohole9 = eye(4); p72tohole9[0:3,0:3] = orientation
+p72tohole9[0:3,3] = array([0.1,0.2,-0.25])
+
+p72tohole8 = eye(4); p72tohole8[0:3,0:3] = orientation
+p72tohole8[0:3,3] = array([0.,0.2,-0.2])
+
+
+p72tohole4 = eye(4); p72tohole4[0:3,0:3] = orientation
+p72tohole4[0:3,3] = p72tohole3[0:3,3] + 0.2*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
+
+p72tohole5 = eye(4); p72tohole5[0:3,0:3] = orientation
+p72tohole5[0:3,3] = p72tohole3[0:3,3] + 0.4*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
+
+p72tohole6 = eye(4); p72tohole6[0:3,0:3] = orientation
+p72tohole6[0:3,3] = p72tohole3[0:3,3] + 0.6*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
+
+p72tohole7 = eye(4); p72tohole7[0:3,0:3] = orientation
+p72tohole7[0:3,3] = p72tohole3[0:3,3] + 0.8*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
+
+
+p72tohole11 = eye(4); p72tohole11[0:3,0:3] = orientation
+p72tohole11[0:3,3] = p72tohole10[0:3,3] + 0.2*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
+
+p72tohole12 = eye(4); p72tohole12[0:3,0:3] = orientation
+p72tohole12[0:3,3] = p72tohole10[0:3,3] + 0.4*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
+
+p72tohole13 = eye(4); p72tohole13[0:3,0:3] = orientation
+p72tohole13[0:3,3] = p72tohole10[0:3,3] + 0.6*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
+
+p72tohole14 = eye(4); p72tohole14[0:3,0:3] = orientation
+p72tohole14[0:3,3] = p72tohole10[0:3,3] + 0.8*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
+
+p72tohole = array([p72tohole9,p72tohole10,p72tohole11,p72tohole12,p72tohole13,p72tohole14,p72tohole1,p72tohole2,p72tohole3,p72tohole4,p72tohole5,p72tohole6,p72tohole7,p72tohole8])
+
+
+
+#screw_2ht(robot,solver,tool,dot(P72,p72tohole[i.incr(1)]),4,0.5)
