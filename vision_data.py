@@ -4,7 +4,7 @@ from dynamic_graph.ros import *
 from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Inverse_of_matrixHomo
 from dynamic_graph.sot.core.matrix_util import RPYToMatrix
 
-def plugObject(robot):
+def createRos(robot):
 
     robot.ros = Ros(robot)
     robot.rosImport = robot.ros.rosImport
@@ -12,6 +12,9 @@ def plugObject(robot):
 
     robot.rosExport.add('matrixHomoStamped','objectInCamera','/object_position')
     
+
+def plugObject(robot):
+
     robot.cameraFrameName = 'cameraBottomLeft'
 
     # Change of reference orientation from Visp to dynamic_graph
@@ -33,15 +36,10 @@ def plugObject(robot):
 def plugObjectSim(robot):
 
     objectInWorld = plugObject(robot)
-    objectInWorld.recompute(robot.device.control.value)
+    objectInWorld.recompute(robot.device.control.time)
     oIw=objectInWorld.value
 
     #since the real robot is not moving we have to compensate the changing of the camera position
-    
-    robot.ros = Ros(robot)
-    robot.rosImport = robot.ros.rosImport
-    robot.rosExport = robot.ros.rosExport
-    robot.rosExport.add('matrixHomoStamped','objectInCamera','/object_position')    
     robot.cameraFrameName = 'cameraBottomLeft'
 
     inv = Inverse_of_matrixHomo("inv")

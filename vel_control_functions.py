@@ -299,7 +299,7 @@ def createVecMult(robot):
     robot.selec.selecRows(0,3)
     plug(robot.selec.sout,robot.mult.sin1)
 
-def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
+def screw_2ht(robot,solver,tool,target,goal,gainMax,gainMin):
     #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
@@ -318,16 +318,26 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
             refToGoalMatrix = RPYToMatrix(goal)
         else:
             refToGoalMatrix = goal
+
         robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
-        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(refToGoalMatrix[0:3,3])
         robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
     else: #goal is a signal
         plug(goal,robot.mTasks['screw'].featureDes.position)
-        plug(goal,robot.m2pos.sin)
-        plug(robot.m2pos.sout,robot.mTasks['gaze'].proj.point3D)
         plug(goal,robot.selec.sin)
         robot.mult.sin2.value = (0.,0.,1.)
         plug(robot.mult.sout,robot.mTasks['screw'].featureVec.positionRef)
+
+    if isinstance (target,ndarray):
+        if len(target)==6:
+            refToTargetMatrix = RPYToMatrix(target)
+        else:
+            refToTargetMatrix = target
+
+        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(target[0:3,3])
+    else: #target is a signal
+        plug(target,robot.m2pos.sin)
+        plug(robot.m2pos.sout,robot.mTasks['gaze'].proj.point3D)
+
 
     robot.mTasks['gaze'].gain.setByPoint(gainMax*2,gainMin*2,0.01,0.9)
     robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)

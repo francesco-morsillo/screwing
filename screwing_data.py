@@ -4,7 +4,7 @@ from numpy import pi, array, eye, dot
 
 orientation = array([[0.,1.,0.],[0.,0.,-1],[-1.,0.,0.]])
 
-security_distance=0.
+security_distance=0.4
 
 p72tohole1 = eye(4); p72tohole1[0:3,0:3] = orientation
 p72tohole1[0:3,3] = array([0.2,0.22+security_distance,0.1])
