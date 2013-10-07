@@ -1,7 +1,8 @@
 from dynamic_graph import plug
 from dynamic_graph.ros import *
 
-from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Inverse_of_matrix
+from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Inverse_of_matrixHomo
+from dynamic_graph.sot.core.matrix_util import RPYToMatrix
 
 def plugObject(robot):
 
@@ -12,9 +13,6 @@ def plugObject(robot):
     robot.rosExport.add('matrixHomoStamped','objectInCamera','/object_position')
     
     robot.cameraFrameName = 'cameraBottomLeft'
-
-
-
 
     # Change of reference orientation from Visp to dynamic_graph
     visp2dg = ((0.,0.,1.,0.),(-1.,0.,0.,0.),(0.,-1.,0.,0.),(0.,0.,0.,1.))
@@ -46,7 +44,7 @@ def plugObjectSim(robot):
     robot.rosExport.add('matrixHomoStamped','objectInCamera','/object_position')    
     robot.cameraFrameName = 'cameraBottomLeft'
 
-    inv = Inverse_of_matrix("inv")
+    inv = Inverse_of_matrixHomo("inv")
     plug(robot.frames[robot.cameraFrameName].position,inv.sin)
 
     mult = Multiply_of_matrixHomo("mult")
@@ -59,4 +57,3 @@ def plugObjectSim(robot):
     plug(robot.frames[robot.cameraFrameName].position,OBJECTINWORLD.sin1)
 
     return OBJECTINWORLD.sout
-
