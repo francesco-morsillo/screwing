@@ -329,7 +329,7 @@ def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
         robot.mult.sin2.value = (0.,0.,1.)
         plug(robot.mult.sout,robot.mTasks['screw'].featureVec.positionRef)
 
-    robot.mTasks['gaze'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
+    robot.mTasks['gaze'].gain.setByPoint(gainMax*2,gainMin*2,0.01,0.9)
     robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
     
 
