@@ -145,6 +145,7 @@ def moveRightHandToTarget(robot,solver,target,gain):
 # ************************************************************************
 #	MOVE RIGHT HAND TO TARGET
 #          Task: The robot moves the han to a given position
+#          Remark: The position has to be tuple of dim 3 or a signal
 # ________________________________________________________________________
 # ************************************************************************
 
@@ -163,8 +164,6 @@ def follow3DPoint(robot,solver,target,gain):
     ############################################################
     # Push
     ############################################################
-	
-    removeUndesiredTasks(solver)
     
     solver.push(robot.mTasks['gaze'].task)
 
