@@ -187,7 +187,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
             print "Goal: " + str(dot(P72,p72tohole[0]))
-            screw_2ht(robot,solver,tool,dot(P72,p72tohole[0]),gainMax, gainMin)
+            screw_2ht(robot,solver,tool,P72,dot(P72,p72tohole[0]),gainMax, gainMin)
             #write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
             state += 1
             print "time = "+str(robot.device.control.time)
@@ -198,7 +198,7 @@ def supervision():
             print "state = "+str(state)
             if state<len(p72tohole)+2:
                 print "Goal: " + str(dot(P72,p72tohole[state-2]))
-                screw_2ht(robot,solver,tool,dot(P72,p72tohole[state-2]),gainMax, gainMin)
+                screw_2ht(robot,solver,tool,P72,dot(P72,p72tohole[state-2]),gainMax, gainMin)
                 robot.device.viewer.updateElementConfig('goal1',vectorToTuple(array( matrixToRPY(dot( P72,p72tohole[state-2] )) )))
 
             if state == len(p72tohole)+2:
@@ -227,7 +227,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.002:
             robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.5,0.,0.,0.,0.))
-            goToHalfSitting(robot,solver,1)
+            goToHalfSitting(robot,solver,4)
             state = 23
             print "time = "+str(robot.device.control.time)
 
@@ -256,7 +256,7 @@ def supervision():
 # --- DATA ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-from dynamic_graph.sot.screwing.screwing_data import tool, P72RPY, P72, p72tohole
+from dynamic_graph.sot.screwing.screwing_data import p72tohole
 
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 

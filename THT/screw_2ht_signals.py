@@ -18,7 +18,7 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, matrixToRPY, RPYTo
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 from dynamic_graph.sot.core.utils.attime import attime
-from dynamic_graph.sot.core.math_small_entities import Selec_of_matrix, Multiply_of_matrixHomo, MatrixToHomo
+from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
 
@@ -189,7 +189,7 @@ def supervision():
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
             print "Goal: " + str(array(goal.value))
             #here there is the plug
-            screw_2ht(robot,solver,tool,goal,gainMax, gainMin)
+            screw_2ht(robot,solver,tool,P72,goal,gainMax, gainMin)
             #write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
             state += 1
             print "time = "+str(robot.device.control.time)
@@ -199,7 +199,7 @@ def supervision():
         if linalg.norm(array(robot.mTasks['screw'].feature.error.value)) < pos_err_des:
             print "state = "+str(state)
             if state<len(p72tohole)+2:
-                m2sig.sin.value = p72tohole[state-2]
+                p72togoal.sin2.value = p72tohole[state-2]
                 print "Goal: " + str(array(goal))
                 #screw_2ht(robot,solver,tool,goal,gainMax, gainMin)
                 goal.recompute(robot.device.control.time)
@@ -260,6 +260,8 @@ def supervision():
 # --- DATA ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
+from dynamic_graph.sot.screwing.screwing_data import p72tohole
+
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.0,0.,0.,0.,0.))
 
@@ -268,64 +270,13 @@ robot.device.viewer.updateElementConfig('P72',P72RPY)
 
 P72 = RPYToMatrix(P72RPY)
 
-orientation = array([[0.,1.,0.],[0.,0.,-1],[-1.,0.,0.]])
-
-p72tohole1 = eye(4); p72tohole1[0:3,0:3] = orientation
-p72tohole1[0:3,3] = array([0.2,0.22,0.1])
-
-p72tohole2 = eye(4); p72tohole2[0:3,0:3] = orientation
-p72tohole2[0:3,3] = array([0.1,0.22,0.15])
-
-p72tohole3 = eye(4); p72tohole3[0:3,0:3] = orientation
-p72tohole3[0:3,3] = array([0.,0.22,0.1])
-
-p72tohole10 = eye(4); p72tohole10[0:3,0:3] = orientation
-p72tohole10[0:3,3] = array([0.2,0.2,-0.2])
-
-p72tohole9 = eye(4); p72tohole9[0:3,0:3] = orientation
-p72tohole9[0:3,3] = array([0.1,0.2,-0.25])
-
-p72tohole8 = eye(4); p72tohole8[0:3,0:3] = orientation
-p72tohole8[0:3,3] = array([0.,0.2,-0.2])
-
-
-p72tohole4 = eye(4); p72tohole4[0:3,0:3] = orientation
-p72tohole4[0:3,3] = p72tohole3[0:3,3] + 0.2*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-p72tohole5 = eye(4); p72tohole5[0:3,0:3] = orientation
-p72tohole5[0:3,3] = p72tohole3[0:3,3] + 0.4*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-p72tohole6 = eye(4); p72tohole6[0:3,0:3] = orientation
-p72tohole6[0:3,3] = p72tohole3[0:3,3] + 0.6*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-p72tohole7 = eye(4); p72tohole7[0:3,0:3] = orientation
-p72tohole7[0:3,3] = p72tohole3[0:3,3] + 0.8*(p72tohole8[0:3,3] - p72tohole3[0:3,3])
-
-
-p72tohole11 = eye(4); p72tohole11[0:3,0:3] = orientation
-p72tohole11[0:3,3] = p72tohole10[0:3,3] + 0.2*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole12 = eye(4); p72tohole12[0:3,0:3] = orientation
-p72tohole12[0:3,3] = p72tohole10[0:3,3] + 0.4*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole13 = eye(4); p72tohole13[0:3,0:3] = orientation
-p72tohole13[0:3,3] = p72tohole10[0:3,3] + 0.6*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole14 = eye(4); p72tohole14[0:3,0:3] = orientation
-p72tohole14[0:3,3] = p72tohole10[0:3,3] + 0.8*(p72tohole1[0:3,3] - p72tohole10[0:3,3])
-
-p72tohole = array([p72tohole9,p72tohole10,p72tohole11,p72tohole12,p72tohole13,p72tohole14,p72tohole1,p72tohole2,p72tohole3,p72tohole4,p72tohole5,p72tohole6,p72tohole7,p72tohole8])
-
 #-----------------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-m2sig = MatrixToHomo("m2sig")
-m2sig.sin.value = matrixToTuple(p72tohole[0])
-
 p72togoal = Multiply_of_matrixHomo("p72togoal")
-plug(m2sig.sout,p72togoal.sin2)
 p72togoal.sin1.value = matrixToTuple(P72)
+p72togoal.sin2.value = matrixToTuple(p72tohole[0])
 
 goal = p72togoal.sout
 goal.recompute(0)

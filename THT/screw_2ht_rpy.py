@@ -187,7 +187,7 @@ def supervision():
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
             print "Goal: " + str(goal[0])
-            screw_2ht(robot,solver,tool,goal[0],gainMax, gainMin)
+            screw_2ht(robot,solver,tool,P72,goal[0],gainMax, gainMin)
             #write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
             state += 1
             print "time = "+str(robot.device.control.time)
@@ -198,7 +198,7 @@ def supervision():
             print "state = "+str(state)
             if state<len(goal)+2:
                 print "Goal: " + str(goal[state-2])
-                screw_2ht(robot,solver,tool,goal[state-2],gainMax, gainMin)
+                screw_2ht(robot,solver,tool,P72,goal[state-2],gainMax, gainMin)
                 robot.device.viewer.updateElementConfig('goal1',vectorToTuple(goal[state-2]))
 
             if state == len(goal)+2:
