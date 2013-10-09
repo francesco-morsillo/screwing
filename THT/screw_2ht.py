@@ -36,7 +36,7 @@ from numpy import linalg, array, pi, eye, dot
 # VELOCITY CONTROL
 
 from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
-from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting
+from dynamic_graph.sot.screwing.vel_control_functions import screw_2ht, get_2ht, openGrippers, closeGrippers, goToHalfSitting, follow3DPoint
 gainMax = 10
 gainMin = 0.5
 
@@ -128,7 +128,7 @@ def inc():
     attime.run(robot.device.control.time)
     updateComDisplay(robot.device,robot.dynamic.com)
 
-    if state >= 3 and state <= 21: 
+    if state >= 4 and state <= 21: 
         updateToolDisplay(robot.mTasks['screw'],linalg.inv(TwoHandToolToScrewMatrix),robot.device)
     """
     if state >= 3 and state <= 21:
@@ -186,13 +186,21 @@ def supervision():
     if state == 2:
         robot.device.state.recompute(robot.device.control.time)
         if linalg.norm(array([ robot.device.state.value[28]-robot.mTasks['posture'].ref[28]  , robot.device.state.value[35]-robot.mTasks['posture'].ref[35] ])) < 0.003:
+            follow3DPoint(robot,solver,vectorToTuple(P72[0:3,3]),4)
+            state += 1
+            print "time = "+str(robot.device.control.time)
+
+    if state == 3:
+        robot.mTasks['gaze'].feature.error.recompute(robot.device.control.time)
+        if linalg.norm(array(robot.mTasks['gaze'].feature.error.value)) < pos_err_des:
             print "Goal: " + str(dot(P72,p72tohole[0]))
             screw_2ht(robot,solver,tool,P72,dot(P72,p72tohole[0]),gainMax, gainMin)
             #write_pos_py("/opt/grx3.0/HRP2LAAS/script/airbus_robot/",robot.device.state.value[6:36])
             state += 1
             print "time = "+str(robot.device.control.time)
 
-    if state >= 3 and state<=19 :
+
+    if state >= 4 and state<=19 :
         robot.mTasks['screw'].feature.error.recompute(robot.device.control.time)
         if linalg.norm(array(robot.mTasks['screw'].feature.error.value)) < pos_err_des:
             print "state = "+str(state)

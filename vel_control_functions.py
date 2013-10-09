@@ -321,8 +321,8 @@ def screw_2ht(robot,solver,tool,target,goal,gainMax,gainMin):
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
     if 'screw' not in robot.mTasks:
         createScrewTask(robot,tool)
-        createM2Pos(robot)
         createVecMult(robot)
+        if not hasattr(robot,'m2pos') : createM2Pos(robot)
 
     # Task Relative
     gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
