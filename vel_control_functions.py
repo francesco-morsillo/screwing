@@ -96,6 +96,23 @@ def openGrippers(robot,solver):
         solver.push(robot.mTasks['posture'].task)
 
 
+# ************************************************************************
+#    MOVE HEAD TO A CERTAIN ANGLE
+#       Robot: HRP-2 N.14
+#       Tasks: move the head
+# ________________________________________________________________________
+# ************************************************************************
+
+def moveHead(robot,solver,angle):
+
+    robot.mTasks['posture'].gotoq(2,head=[angle,0])
+
+    # Eventual taskPosture creation
+    if 'taskposture' not in solver.toList():
+        solver.push(robot.mTasks['posture'].task)
+
+
+
 # ________________________________________________________________________
 # ************************************************************************
 #    GO TO HALF SITTING POSE
@@ -143,8 +160,8 @@ def moveRightHandToTarget(robot,solver,target,gain):
 
 # ________________________________________________________________________
 # ************************************************************************
-#	MOVE RIGHT HAND TO TARGET
-#          Task: The robot moves the han to a given position
+#	FOLLOW A POINT IN SPACE
+#          Task: The robot moves the head to follow a point in space
 #          Remark: The position has to be tuple of dim 3 or a signal
 # ________________________________________________________________________
 # ************************************************************************
