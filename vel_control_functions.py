@@ -345,11 +345,16 @@ def screw_2ht(robot,solver,tool,target,goal,gainMax,gainMin):
 
     if isinstance (target,ndarray):
         if len(target)==6:
-            refToTargetMatrix = RPYToMatrix(target)
-        else:
-            refToTargetMatrix = target
-
-        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(target[0:3,3])
+            targetTuple = vectorToTuple(target[0:3])
+        else: #matrix
+            targetTuple = vectorToTuple(target[0:3,3])
+        robot.mTasks['gaze'].proj.point3D.value=targetTuple
+    elif isinstance (target,tuple):
+        if len(target)==6:
+            targetTuple = (target[0],target[1],target[2])
+        else: #matrix
+            targetTuple = (target[0,3],target[1,3],target[2,3])
+        robot.mTasks['gaze'].proj.point3D.value=targetTuple
     else: #target is a signal
         plug(target,robot.m2pos.sin)
         plug(robot.m2pos.sout,robot.mTasks['gaze'].proj.point3D)

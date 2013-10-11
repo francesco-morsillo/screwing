@@ -260,7 +260,9 @@ def supervision():
 # --- DATA ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-from dynamic_graph.sot.screwing.screwing_data import p72tohole
+from dynamic_graph.sot.screwing.screwing_data import getData
+
+p72tohole = getData(0.)
 
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.0,0.,0.,0.,0.))

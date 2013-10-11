@@ -259,7 +259,7 @@ def supervision():
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 robot.device.viewer.updateElementConfig('TwoHandTool',(0.,0.0,0.,0.,0.,0.))
 
-P72 = (0.75,-0.45,1.05,0.,0.,1.57)
+P72 = (0.75,-0.45,0.85,0.,0.,1.57)
 robot.device.viewer.updateElementConfig('P72',P72)
 
 limit1 = array(P72) + array([-0.22,0.3,0.32,0.,1.57,-1.57])
@@ -267,9 +267,9 @@ limit2 = array(P72) + array([-0.23,-0.3,0.23,0.,1.57,-1.57])
 limit3 = array(P72) + array([-0.23,-0.3,-0.38,0.,1.57,-1.57])
 limit4 = array(P72) + array([-0.22,0.3,-0.33,0.,1.57,-1.57])
 
-goal1 = array(P72) + array([-0.22,0.2,0.2,0.,1.57,-1.57])
-goal2 = array(P72) + array([-0.22,0.1,0.25,0.,1.57,-1.57])
-goal3 = array(P72) + array([-0.22,0.,0.2,0.,1.57,-1.57])
+goal1 = array(P72) + array([-0.22,0.2,0.1,0.,1.57,-1.57])
+goal2 = array(P72) + array([-0.22,0.1,0.15,0.,1.57,-1.57])
+goal3 = array(P72) + array([-0.22,0.,0.1,0.,1.57,-1.57])
 
 goal10 = array(P72) + array([-0.2,0.2,-0.2,0.,1.57,-1.57])
 goal9 = array(P72) + array([-0.2,0.1,-0.25,0.,1.57,-1.57])

@@ -31,18 +31,18 @@ from dynamic_graph import plug
 from dynamic_graph.sot.core.matrix_util import vectorToTuple, matrixToTuple, matrixToRPY, RPYToMatrix
 from dynamic_graph.sot.core import FeatureGeneric, FeaturePoint6d
 from dynamic_graph.sot.core.feature_vector3 import *
+from dynamic_graph.sot.core.math_small_entities import Multiply_of_matrixHomo, Selec_column_of_matrix, Selec_of_matrix, Multiply_matrix_vector
 
 from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from dynamic_graph.sot.dyninv.meta_tasks_dyn import gotoNd
 from dynamic_graph.sot.dyninv import TaskDynInequality
 from dynamic_graph.sot.dyninv.meta_tasks_dyn_relative import gotoNdRel, MetaTaskDyn6dRel
 
-from numpy import eye, array, dot, pi, linalg
+from numpy import eye, array, dot, pi, linalg, matrix, ndarray
 
-from dynamic_graph.sot.screwing.openHRP.move_2ht import removeUndesiredTasks
 from dynamic_graph.sot.screwing.utility import TwoHandToolToTriggerMatrix, TwoHandToolToSupportMatrix, TwoHandToolToScrewMatrix
 
-from dynamic_graph.sot.screwing.vel_control_functions import createFeatureVec
+from dynamic_graph.sot.screwing.vel_control_functions import createFeatureVec, createM2Pos, createVecMult
 
 
 
@@ -104,6 +104,25 @@ def openGrippers(robot,solver):
 
 
 
+# ************************************************************************
+#    MOVE HEAD TO A CERTAIN ANGLE
+#       Robot: HRP-2 N.14
+#       Tasks: move the head
+# ________________________________________________________________________
+# ************************************************************************
+
+def moveHead(robot,solver,angle):
+
+    # Pose definition
+    pose = array(robot.halfSitting)
+    pose[20] = angle
+
+    # New taskPosture creation
+    robot.mTasks['posture'].ref = vectorToTuple(pose)
+    robot.mTasks['posture'].gain.setConstant(10)
+
+
+
 
 # ________________________________________________________________________
 # ************************************************************************
@@ -150,7 +169,31 @@ def moveRightHandToTarget(robot,solver,target,gainMax):
 
 
 
+# ________________________________________________________________________
+# ************************************************************************
+#	FOLLOW A POINT IN SPACE
+#          Task: The robot moves the head to follow a point in space
+#          Remark: The position has to be tuple of dim 3 or a signal
+# ________________________________________________________________________
+# ************************************************************************
 
+def follow3DPoint(robot,solver,target,gain):
+
+    ############################################################
+    # Reference and gain setting
+    ############################################################
+
+    if isinstance (target,tuple):
+        robot.mTasks['gaze'].goto3D(target,(gain,gain/5.0,0.01,0.9))
+    else: #target is a signal
+        plug(target,robot.mTasks['gaze'].proj.point3D)
+        robot.mTasks['gaze'].gain.setByPoint(gain,gain/5.0,0.01,0.9)
+    
+    ############################################################
+    # Push
+    ############################################################
+    
+    solver.push(robot.mTasks['gaze'].task)
 
 
 # ________________________________________________________________________
@@ -257,134 +300,61 @@ def createScrewTask(robot,TwoHandTool):
     robot.mTasks['screw'].featureDes.velocity.value=(0,0,0,0,0,0)
     robot.mTasks['screw'].feature.selec.value = '000111'
 
-
     # TASK Screw orientation
     robot.mTasks['screw'].featureVec = FeatureVector3("featureVecScrew")
-    plug(robot.dynamic.signal('rh'),robot.mTasks['screw'].featureVec.signal('position'))
-    plug(robot.dynamic.signal('Jrh'),robot.mTasks['screw'].featureVec.signal('Jq'))
-    robot.mTasks['screw'].featureVec.vector.value = array([0.,0.,-1.])
+    plug(robot.mTasks['screw'].opPointModif.position,robot.mTasks['screw'].featureVec.signal('position'))
+    plug(robot.mTasks['screw'].opPointModif.jacobian,robot.mTasks['screw'].featureVec.signal('Jq'))
+    robot.mTasks['screw'].featureVec.vector.value = array([0.,0.,1.])
     robot.mTasks['screw'].task.add(robot.mTasks['screw'].featureVec.name)
 
-
-def screw_2ht(robot,solver,tool,goal,gainMax,gainMin):
+def screw_2ht(robot,solver,tool,target,goal,gainMax,gainMin):
     #goal = array([0.5,-0.3,1.1,0.,1.57,0.])
 
     if 'rel' not in robot.mTasks: createRelativeTask(robot)
-    if 'screw' not in robot.mTasks: createScrewTask(robot,tool)
+    if 'screw' not in robot.mTasks:
+        createScrewTask(robot,tool)
+        createVecMult(robot)
+        if not hasattr(robot,'m2pos') : createM2Pos(robot)
 
     # Task Relative
     gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
     robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
 
-    # Goal HM
-    refToGoalMatrix = RPYToMatrix(goal)
-
     # Aim setting
-    robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
-    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
-    robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
+    if isinstance (goal,ndarray):
+        if len(goal)==6:
+            refToGoalMatrix = RPYToMatrix(goal)
+        else:
+            refToGoalMatrix = goal
 
-    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task])
+        robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
+        robot.mTasks['screw'].featureVec.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
+    else: #goal is a signal
+        plug(goal,robot.mTasks['screw'].featureDes.position)
+        plug(goal,robot.selec.sin)
+        robot.mult.sin2.value = (0.,0.,1.)
+        plug(robot.mult.sout,robot.mTasks['screw'].featureVec.positionRef)
+
+    if isinstance (target,ndarray):
+        if len(target)==6:
+            refToTargetMatrix = RPYToMatrix(target)
+        else:
+            refToTargetMatrix = target
+
+        robot.mTasks['gaze'].proj.point3D.value=vectorToTuple(target[0:3,3])
+    else: #target is a signal
+        plug(target,robot.m2pos.sin)
+        plug(robot.m2pos.sout,robot.mTasks['gaze'].proj.point3D)
+
+
+    robot.mTasks['gaze'].gain.setByPoint(gainMax*2,gainMin*2,0.01,0.9)
+    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
+    
+
+    tasks = array([robot.mTasks['rel'].task, robot.mTasks['gaze'].task, robot.mTasks['screw'].task])
 
     # sot charging
-    if not (('taskrel' in solver.toList() ) and ('taskscrew' in solver.toList())):
+    if not ( ('taskrel' in solver.toList()) and ('taskgaze' in solver.toList()) and ('taskscrew' in solver.toList()) ):
         removeUndesiredTasks(solver)
         for i in range(len(tasks)):
             solver.push(tasks[i])
-
-
-"""
-Old one...just to remember XD
-
-def screw_2ht(robot,solver,TwoHandTool,goal,gainMax,gainMin):
-
-    if 'rel' not in robot.mTasks: createRelativeTask(robot)
-
-    # Screw Lenght
-    screw_len = 0.03
-
-    refToTwoHandToolMatrix = array(RPYToMatrix(TwoHandTool))
-
-    #RH-TwoHandTool Homogeneous Transformation Matrix (fixed in time)
-    robot.mTasks['rh'].feature.position.recompute(0)
-    robot.mTasks['lh'].feature.position.recompute(0)
-    RHToTwoHandToolMatrix = dot(linalg.inv(array(robot.mTasks['rh'].feature.position.value)),refToTwoHandToolMatrix)
-    #!!!!!! RH and Support are different references, because the X rotation is not controlled in positioning!!!!!!!!!!!!!!!!!!!!!!!!!!
-    RHToScrewMatrix = dot(RHToTwoHandToolMatrix,TwoHandToolToScrewMatrix)
-
-    # TASK Screw
-    robot.mTasks['screw']=MetaTaskDyn6d('screw',robot.dynamic,'screw','right-wrist')
-    handMgrip = array( robot.mTasks['rh'].opmodif )
-    robot.mTasks['screw'].opmodif = matrixToTuple(dot(handMgrip,RHToScrewMatrix))
-    robot.mTasks['screw'].featureDes.velocity.value=(0,0,0,0,0,0)
-    robot.mTasks['screw'].feature.selec.value = '000111'
-    robot.mTasks['screw'].gain.setByPoint(gainMax,gainMin,0.01,0.9)
-
-    # TASK Screw orientation
-    featureVecScrew = FeatureVector3("featureVecScrew")
-    plug(robot.dynamic.signal('rh'),featureVecScrew.signal('position'))
-    plug(robot.dynamic.signal('Jrh'),featureVecScrew.signal('Jq'))
-    featureVecScrew.vector.value = array([0.,0.,-1.])
-    robot.mTasks['screw'].task.add(featureVecScrew.name)
-
-    # Task Relative
-    gotoNdRel(robot.mTasks['rel'],array(robot.mTasks['rh'].feature.position.value),array(robot.mTasks['lh'].feature.position.value),'110111',gainMax*2)
-    robot.mTasks['rel'].feature.errordot.value=(0,0,0,0,0)	# not to forget!!
-
-
-
-
-    ######################################################################
-    ###------TASK INEQUALITY----------------------------------------------
-    ######################################################################
-
-    #Task Waist
-    if 'taskWaistIne' not in robot.tasksIne :
-        featureWaist = FeaturePoint6d('featureWaist')
-        plug(robot.dynamic.waist,featureWaist.position)
-        plug(robot.dynamic.Jwaist,featureWaist.Jq)
-        robot.tasksIne['taskWaistIne']=TaskDynInequality('taskWaistIne')
-        plug(robot.dynamic.velocity,robot.tasksIne['taskWaistIne'].qdot)
-        robot.tasksIne['taskWaistIne'].add(featureWaist.name)
-        
-    robot.tasksIne['taskWaistIne'].selec.value = '110000'
-    robot.tasksIne['taskWaistIne'].referenceInf.value = (0.,0.,0.,0.,-0.1,-0.7)    # Roll Pitch Yaw min
-    robot.tasksIne['taskWaistIne'].referenceSup.value = (0.,0.,0.,0.,0.5,0.7)  # Roll Pitch Yaw max
-    robot.tasksIne['taskWaistIne'].dt.value=robot.timeStep
-    robot.tasksIne['taskWaistIne'].controlGain.value = 10
-    
-
-    #Task Chest
-    if 'taskChestIne' not in robot.tasksIne :
-        featureChest = FeaturePoint6d('featureChest')
-        plug(robot.dynamic.waist,featureChest.position)
-        plug(robot.dynamic.Jwaist,featureChest.Jq)
-        robot.tasksIne['taskChestIne']=TaskDynInequality('taskChestIne')
-        plug(robot.dynamic.velocity,robot.tasksIne['taskChestIne'].qdot)
-        robot.tasksIne['taskChestIne'].add(featureChest.name)
-
-    robot.tasksIne['taskChestIne'].selec.value = '110000'
-    robot.tasksIne['taskChestIne'].referenceInf.value = (0.,0.,0.,0.,0.,-0.7)    # Roll Pitch Yaw min
-    robot.tasksIne['taskChestIne'].referenceSup.value = (0.,0.,0.,0.,0.3,0.7)  # Roll Pitch Yaw max
-    robot.tasksIne['taskChestIne'].dt.value=robot.timeStep
-    robot.tasksIne['taskChestIne'].controlGain.value = 10
-
-
-    # Goal HM
-    refToGoalMatrix = RPYToMatrix(goal)
-
-    # Aim setting
-    robot.mTasks['screw'].ref = matrixToTuple(refToGoalMatrix)
-    featureVecScrew.positionRef.value = dot(refToGoalMatrix[0:3,0:3],array([0.,0.,1.]))
-
-    tasks = array([robot.mTasks['rel'].task,robot.mTasks['screw'].task,robot.tasksIne['taskWaistIne'],robot.tasksIne['taskChestIne']])
-
-
-    # sot charging
-    solver.sot.damping.value = 0.001
-
-    removeUndesiredTasks(solver)
-
-    for i in range(len(tasks)):
-        solver.push(tasks[i])
-"""

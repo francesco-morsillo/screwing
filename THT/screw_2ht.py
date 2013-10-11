@@ -43,7 +43,7 @@ gainMin = 0.5
 # ACCELERATION CONTROL
 """
 from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
-from dynamic_graph.sot.screwing.acc_control_functions import get_2ht, openGrippers, closeGrippers, goToHalfSitting, screw_2ht
+from dynamic_graph.sot.screwing.acc_control_functions import get_2ht, openGrippers, closeGrippers, goToHalfSitting, screw_2ht, follow3DPoint
 gainMax = 50
 gainMin = 2
 """
@@ -264,7 +264,9 @@ def supervision():
 # --- DATA ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-from dynamic_graph.sot.screwing.screwing_data import p72tohole
+from dynamic_graph.sot.screwing.screwing_data import getData
+
+p72tohole = getData(0.)
 
 tool = (0.4,-0.1,0.8,0.,0.,pi/2)
 
