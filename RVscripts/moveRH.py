@@ -1,22 +1,51 @@
+# ______________________________________________________________________________
+# ******************************************************************************
+#
+#    BASIC EXAMPLE OF THE INVERSE KINEMATICS
+#       Robot: HRP-2 N.14
+#       Tasks: Move right hand to a target
+# 
+# ______________________________________________________________________________
+# ******************************************************************************  
+
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph import plug
 
-from dynamic_graph.sot.core.matrix_util import matrixToTuple, matrixToRPY, RPYToMatrix, vectorToTuple
+from dynamic_graph.sot.core.matrix_util import matrixToTuple
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import *
 from dynamic_graph.sot.core.utils.attime import attime
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor, halfSittingConfig
+from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
+from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
 
-from dynamic_graph.sot.screwing.utility import pos_err_des,TwoHandToolToScrewMatrix,TwoHandToolToTriggerMatrix
+from dynamic_graph.sot.core.utils.history import History
 
-from numpy import array,pi,linalg,isnan
 
-from dynamic_graph.sot.application.acceleration.precomputed_tasks import initialize
-from dynamic_graph.sot.screwing.functions import moveRightHandToTarget
+
+############################################################
+###   CHOICE OF FIRST OR SECOND ORDER
+############################################################
+#-------------------------------------------------------------------------
+# VELOCITY CONTROL
+
+from dynamic_graph.sot.application.velocity.precomputed_meta_tasks import initialize
+from dynamic_graph.sot.screwing.vel_control_functions import moveRightHandToTarget
+gainMax = 5
+
+# ACCELERATION CONTROL
+"""
+from dynamic_graph.sot.application.acceleration.precomputed_meta_tasks import initialize
+from dynamic_graph.sot.screwing.acc_control_functions import moveRightHandToTarget
+gainMax = 40
+"""
+#-------------------------------------------------------------------------
+
+
 
 
 
@@ -56,7 +85,6 @@ addRobotViewer(robot.device,small=True,verbose=False)
 
 robot.timeStep=5e-3
 
-
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -90,6 +118,7 @@ robot.device.control.unplug()
 # --- SOLVER ----------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
+# initialize in acceleration mode
 solver = initialize(robot)
 
 # ------------------------------------------------------------------------------
@@ -106,7 +135,6 @@ def loop():
     inc()
 runner=loop()
 
-
 # --- shortcuts -------------------------------------------------
 @optionalparentheses
 def go(): runner.play()
@@ -115,14 +143,41 @@ def stop(): runner.pause()
 @optionalparentheses
 def next(): inc()
 @optionalparentheses
-def iter():         print 'iter = ',robot.state.time
+def iter():         print 'iter = ',robot.device.state.time
 @optionalparentheses
 def status():       print runner.isPlay
 
-#-------------------------------------------------------------------------
-# --- RUN ----------------------------------------------------------------
-#-------------------------------------------------------------------------
+"""
+#-----------------------------------------------------------------------------
+# --- TRACER ------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+from dynamic_graph.tracer import *
+tr = Tracer('tr')
+tr.open('/tmp/','','.dat')
+tr.start()
+robot.after.addSignal('tr.triger')
 
+dyn = robot.dynamic
+
+tr.add('dyn.com','com2')
+tr.add(taskRH.task.name+'.error','erh2')
+
+tr.add(taskLim.name+".normalizedPosition","qn")
+robot.after.addSignal(taskLim.name+".normalizedPosition")
+
+tr.add("dyn.position","q")
+robot.after.addSignal("dyn.position")
+tr.add("dyn.velocity","dq")
+robot.after.addSignal("dyn.velocity")
+tr.add("dyn.acceleration","ddq")
+robot.after.addSignal("dyn.acceleration")
+"""
+
+#-----------------------------------------------------------------------------
+# --- RUN --------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+
+# RH metaTask
 target = (0.5,-0.2,1.3)
-gain = 50
-moveRightHandToTarget(robot,solver,target,gain)
+robot.device.viewer.updateElementConfig('zmp',target+(0,0,0))
+moveRightHandToTarget(robot,solver,target,gainMax)
